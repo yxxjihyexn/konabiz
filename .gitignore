@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# 비밀값 — 위치 상관없이 제외, 예시 파일만 커밋
+.env
+!.env.example
+
+# 로컬 전용
+포트폴리오 사용할것/
+.claude/settings.local.json
