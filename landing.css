@@ -1,0 +1,581 @@
+/* =========================================================
+   코나비즈 — landing.css (01 랜딩 + 02 시뮬레이터 · 03 상담예약 · 04 로그인 모달)
+   공통 토큰·컴포넌트는 style.css
+   기준: Figma PC 01~04 / Mobile 01~03
+   ========================================================= */
+
+/* ---------- 1. 페이지 틀 ---------- */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-outer);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-section);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-title);
+}
+
+.section__title {               /* H1_600 32/40 */
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Feature card — 패딩 24, 간격 16, 0.5 보더, r12 */
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--neutral-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-12);
+}
+.feature-card__title { font-size: 18px; line-height: 26px; font-weight: 600; }
+.feature-card__desc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-secondary-light);
+}
+
+/* ---------- 2. GNB ---------- */
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-h);
+}
+
+.gnb__list { display: flex; gap: 8px; }
+.gnb__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 130px;
+  height: 48px;
+  border-radius: var(--radius-8);
+  font-size: 14px;
+  line-height: 22px;
+}
+.gnb__link:hover { background: var(--neutral-wash); }
+
+.header__actions { display: flex; align-items: center; gap: 12px; }
+.header__menu { display: none; }
+
+/* ---------- 3. Hero ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  text-align: center;
+}
+.hero__text { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.hero__title { font-size: 48px; line-height: 56px; font-weight: 600; }   /* Display_600 */
+.hero__sub { font-size: 16px; line-height: 26px; color: var(--text-secondary-light); }
+.hero__actions { display: flex; justify-content: center; gap: 12px; }
+
+/* ---------- 4. Problem / Solution ---------- */
+.card-list { display: flex; gap: var(--gap-card); width: 100%; }
+
+.card-list--problem > .feature-card { flex: 1 1 0; min-width: 0; }
+
+.card-list--solution { flex-wrap: wrap; }
+.card-list--solution > .feature-card { flex: 1 1 400px; }   /* Min 400 → 1200 안에서 2열 */
+
+/* ---------- 5. 시뮬레이터 배너 ---------- */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 48px;
+  background: var(--neutral-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-12);
+}
+.banner__content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 0 1 588px;
+  min-width: 0;
+}
+.banner__text { display: flex; flex-direction: column; gap: 16px; }
+.banner__title { font-size: 24px; line-height: 32px; font-weight: 600; }   /* H2_600 */
+.banner__body { font-size: 16px; line-height: 26px; color: var(--text-secondary-light); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.banner__btn { flex-shrink: 0; }
+
+/* ---------- 6. 가격정책 ---------- */
+.price { display: flex; flex-direction: column; gap: var(--gap-title); }
+
+.price-summary { display: flex; gap: var(--gap-card); }
+.price-item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 24px;
+  background: var(--neutral-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-12);
+}
+.price-item:nth-child(2) { gap: 12px; }
+.price-item__text { display: flex; flex-direction: column; gap: 8px; }
+.price-item__label { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.price-item__value { font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.price-table { display: flex; flex-direction: column; gap: 12px; }
+.price-table__group { display: flex; flex-direction: column; gap: 8px; }
+.price-table__title {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+.price-table__unit { font-size: 14px; line-height: 22px; font-weight: 400; color: var(--text-secondary-light); }
+
+.table .col-type { width: 200px; }
+.table .col-price { width: 160px; text-align: right; }
+.table th, .table td { padding-block: 16px; vertical-align: middle; }
+.table th + td, .table td + td, .table__head th + th { padding-left: 24px; }
+
+.table__head th {
+  padding-block: 12px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--text-secondary-light);
+}
+.table tbody tr { border-bottom: 0.5px solid var(--border-default); }
+.table tbody th { font-weight: 600; }
+.table tbody .col-desc { color: var(--text-secondary-light); }
+.table tbody .col-price { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.price-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  text-align: right;
+}
+.price-note__list {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary-light);
+}
+.price-note__list li { display: inline; }
+.price-note__list li + li::before { content: " · "; }
+.price-note .text-link { height: 40px; margin-top: -9px; }   /* 글자 22 + 터치 영역 40 → 위아래 9씩 겹침 */
+
+/* ---------- 7. 도입 절차 ---------- */
+.step-list { display: flex; gap: var(--gap-card); }
+.guide-step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.guide-step__num {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-wash);
+  font-weight: 600;
+}
+.guide-step__text { display: flex; flex-direction: column; gap: 8px; }
+.guide-step__title { font-size: 16px; line-height: 26px; font-weight: 600; }
+.guide-step__desc { color: var(--text-secondary-light); }
+
+/* ---------- 8. 클로징 CTA ---------- */
+.cta { display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
+.cta__text { display: flex; flex-direction: column; gap: 8px; }
+.cta__lead { font-size: 16px; line-height: 26px; color: var(--text-secondary-light); }
+.cta__title { font-size: 32px; line-height: 40px; font-weight: 600; }
+
+/* ---------- 9. 푸터 ---------- */
+.footer {
+  background: var(--neutral-inverted);
+  color: var(--text-secondary-dark);
+  font-size: 12px;
+  line-height: 18px;
+  /* 기본 48 + FAB(56) + 20 — 맨 아래에서 FAB이 링크를 가리지 않게 */
+  padding: 64px 0 calc(48px + 76px);
+}
+.footer__inner { display: flex; flex-direction: column; gap: 32px; }
+.footer__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; }
+.footer__company { display: flex; flex-direction: column; gap: 16px; }
+.footer__detail { display: flex; flex-direction: column; gap: 4px; }
+
+.footer__right { display: flex; flex-direction: column; align-items: flex-end; gap: 16px; }
+.footer__links { display: flex; gap: 24px; }
+.footer__link { display: flex; align-items: center; height: 40px; }
+.footer__link:hover { color: var(--text-primary-dark); }
+.footer__link--strong { color: var(--text-primary-dark); font-weight: 600; }
+
+.footer__sns { display: flex; gap: 8px; }
+.sns-link {
+  display: flex;
+  padding: 8px;
+  border-radius: var(--radius-8);
+}
+.sns-link:hover { background: var(--border-inverted); }
+
+.footer__bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 24px;
+  border-top: 0.5px solid var(--border-inverted);
+}
+
+/* =========================================================
+   02 결제 시뮬레이터 모달 (1000)
+   ========================================================= */
+.modal__top--flush { padding-bottom: 0; border-bottom: 0; }   /* 머리와 본문 사이 구분선 없음 */
+.sim { padding-top: 24px; padding-bottom: 32px; }
+
+.sim-presets .segment__option { padding: 0 12px; }
+
+/* 본문 3열: 차감 규칙 360 / 결제해보기 264 / 내 포인트 지갑 264 */
+.sim-body {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.sim-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.sim-col__title { font-weight: 600; }
+
+/* 차감 규칙 카드 rule-card */
+.rule-list { display: flex; flex-direction: column; gap: 12px; }
+.rule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  background: var(--neutral-card);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);   /* 0.5 Inside — 높이에 더하지 않음 */
+  border-radius: var(--radius-12);
+}
+.rule-card__title { font-size: 16px; line-height: 26px; font-weight: 600; white-space: pre-wrap; }
+.rule-card__desc { color: var(--text-secondary-light); }
+
+/* 결제해보기 */
+.pay-form { display: flex; flex-direction: column; gap: 24px; transition: opacity 0.2s ease-out; }
+.pay-form.is-locked { opacity: 0.5; }
+.pay-form.is-locked .field__control,
+.pay-form.is-locked .segment { pointer-events: none; }
+.pay-form .btn:disabled { opacity: 1; cursor: default; }       /* 잠금 표현은 묶음 불투명도 50%로 한 번만 */
+.pay-form.is-locked .field__control { background: var(--neutral-card); }
+.pay-form.is-locked .field__input:disabled { color: var(--text-primary-light); }
+.amount { display: flex; flex-direction: column; gap: 8px; }
+.amount__label { font-weight: 600; }
+.amount__value { font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 결과 박스 result-box — 결과 자리를 처음부터 잡아둠 */
+.result-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-radius: var(--radius-8);
+  background: var(--neutral-wash);
+  color: var(--text-secondary-light);
+}
+.result-box__idle { text-align: center; }
+.result-box__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+.result-box__status { display: flex; align-items: center; gap: 4px; }
+.result-box__status img { width: 20px; height: 20px; }
+.result-box__amount { font-variant-numeric: tabular-nums; }
+.result-box.is-approved { background: var(--success-tint); color: var(--text-on-success-tint); }
+.result-box.is-blocked { background: var(--danger-tint); color: var(--text-on-danger-tint); }
+
+.wallet-row .info-row__value { transition: color 0.2s ease-out; }
+.wallet-row.is-changed .info-row__value { color: var(--text-on-success-tint); }
+.wallet-list .info-row:last-child { border-bottom: 0; }
+
+.result-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* =========================================================
+   03 상담예약 모달 (1/2 · 2/2 720 → 완료 480)
+   ========================================================= */
+.booking-form { display: contents; }
+.form-guide { color: var(--text-secondary-light); }
+
+.form-section { display: flex; flex-direction: column; gap: 20px; }
+.form-section__title { font-size: 16px; line-height: 26px; font-weight: 600; }
+.form-row { display: flex; gap: 16px; }
+.form-row > .field { flex: 1 1 0; }
+
+/* 선택 조건 접기 영역 (기본 접힘) */
+.custom-panel {
+  padding: 20px;
+  background: var(--neutral-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-12);
+}
+.custom-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+.custom-panel__text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px; }
+.custom-panel__title { font-weight: 600; }
+.custom-panel__desc { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.custom-panel__icon { flex-shrink: 0; width: 24px; height: 24px; transition: transform 0.2s ease-out; }
+.custom-panel__head[aria-expanded="true"] .custom-panel__icon { transform: rotate(180deg); }
+.custom-panel__content { display: flex; flex-direction: column; gap: 24px; padding-top: 24px; }
+.chip-area { display: flex; flex-direction: column; gap: 16px; }
+.chip-area__title { font-weight: 600; }
+
+/* 2/2 상담 방법 · 상담 일시 */
+.form-section--tight { gap: 16px; }
+.segment--wide { gap: 16px; }
+.address-field { animation: fade-in 0.2s ease-out; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.week-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.week-nav__range { font-weight: 600; text-align: center; }
+
+.slot-days { display: none; }
+.slot-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.slot-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.slot-col__head { font-weight: 600; text-align: center; }
+.slot-col__list { display: flex; flex-direction: column; gap: 8px; }
+.slot { width: 100%; flex: none; padding: 0 8px; }
+
+.slot-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.slot-legend li { display: flex; align-items: center; gap: 8px; }
+.slot-legend__swatch { width: 16px; height: 16px; border-radius: var(--radius-4); }
+.slot-legend__swatch--open { background: var(--neutral-card); box-shadow: inset 0 0 0 1px var(--border-default); }
+.slot-legend__swatch--selected { background: var(--neutral-ink); }
+.slot-legend__swatch--closed { background: var(--neutral-canvas); }
+
+.booking-notice { margin-bottom: -8px; }
+
+/* 2/2 아래 버튼 영역: 왼쪽 선택 요약 + [이전] · [예약 확정하기] */
+.booking-footer { gap: 16px; }
+.booking-footer__summary { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.booking-footer__summary.is-empty { font-weight: 400; color: var(--text-secondary-light); }
+.booking-footer__actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* 예약 완료 (480) */
+.done { padding-top: 48px; }
+.done__close { position: absolute; top: 24px; right: 24px; }
+.done__hero { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+.done__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--success-tint);
+}
+.done__icon img { width: 24px; height: 24px; }
+.done__text { display: flex; flex-direction: column; gap: 4px; }
+.done__title { font-size: 18px; line-height: 26px; font-weight: 600; }
+.done__title:focus { box-shadow: none; }
+.done__desc { color: var(--text-secondary-light); }
+.done__note { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.sandbox-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+  border-radius: var(--radius-12);
+  background: var(--cyan-50);
+}
+.sandbox-card__title { font-weight: 600; }
+.sandbox-card__desc { color: var(--text-secondary-light); }
+
+/* =========================================================
+   04 통합 로그인 모달 (480)
+   ========================================================= */
+.login-form { display: flex; flex-direction: column; gap: 24px; }
+.login-fields { display: flex; flex-direction: column; gap: 20px; }
+.login-help {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary-light);
+  text-align: center;
+}
+.login-help__row { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.login-help__row .text-link { margin-block: -9px; }   /* 글자 22 + 터치 영역 40 → 위아래 9씩 겹침 */
+
+/* =========================================================
+   Tablet (768–1023): GNB만 햄버거 + 드로어로 접고, 본문은 PC 배치 유지
+   ========================================================= */
+@media (max-width: 1023px) {
+  .gnb, .header__actions { display: none; }
+  .header__menu { display: inline-flex; margin-right: -8px; }
+
+  .banner { padding: 40px; }
+
+  /* 시뮬레이터: 1000 모달이 들어가지 않는 폭 — 규칙 열을 위로 올리고 결제·지갑 2열 */
+  .sim-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sim-col--rules { grid-column: 1 / -1; }
+  .sim-col--rules .rule-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim-col--rules .alert-box { grid-column: 1 / -1; }
+}
+
+/* =========================================================
+   Mobile (≤ 767): 375 기준
+   ========================================================= */
+@media (max-width: 767px) {
+  .header__menu { margin-right: -8px; }
+
+  /* 공통 타이틀 H2_600 */
+  .section__title { font-size: 24px; line-height: 32px; }
+
+  /* Hero */
+  .hero__text { gap: 16px; }
+  .hero__title { font-size: 24px; line-height: 32px; }
+  .hero__sub { font-size: 14px; line-height: 22px; }
+  .hero__actions { flex-direction: column; gap: 8px; width: 100%; }
+  .hero__actions .btn { width: 100%; }
+
+  /* Problem / Solution — 1열 */
+  .card-list { flex-direction: column; }
+  .card-list--solution > .feature-card { flex: none; }
+
+  /* 시뮬레이터 배너 — 세로 스택 */
+  .banner { flex-direction: column; align-items: stretch; padding: 24px; }
+  .banner__content { flex: none; }
+  .banner__title { font-size: 18px; line-height: 26px; text-align: center; }  /* H3_600 (Figma 모바일: 가운데 정렬) */
+  .banner__body { font-size: 14px; line-height: 22px; }
+  .banner__btn { width: 100%; }
+
+  /* 가격정책 — 카드 1장 + 구분선 */
+  .price-summary {
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    background: var(--neutral-card);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--radius-12);
+  }
+  .price-item { padding: 0; border: 0; border-radius: 0; background: none; }
+  .price-item + .price-item { padding-top: 16px; border-top: 0.5px solid var(--border-default); }
+  .price-item__value { font-size: 24px; line-height: 32px; }
+
+  .price-table__group { gap: 12px; }
+  .price-table__title { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+  /* 표 → 헤더 없는 열린 리스트: [타입명 + 특징 | 단가] */
+  .table__head { display: none; }
+  .table { border-top: 0.5px solid var(--border-default); }
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "type price" "desc price";
+    column-gap: 16px;
+    row-gap: 4px;
+    padding-block: 16px;
+  }
+  .table th, .table td { padding: 0 !important; width: auto !important; }
+  .table tbody .col-type { grid-area: type; }
+  .table tbody .col-desc { grid-area: desc; }
+  .table tbody .col-price { grid-area: price; align-self: start; }
+
+  .price-note { align-items: flex-start; text-align: left; }
+  .price-note__list { display: flex; flex-direction: column; gap: 4px; }
+  .price-note__list li { display: block; }
+  .price-note__list li::before,
+  .price-note__list li + li::before { content: "· "; }
+
+  /* 도입 절차 — 세로 리스트, 좌측 정렬 */
+  .step-list { flex-direction: column; }
+  .guide-step { flex-direction: row; align-items: flex-start; text-align: left; }
+  .guide-step__text { flex: 1 1 0; min-width: 0; }
+
+  /* 클로징 CTA */
+  .cta { gap: 24px; }
+  .cta__lead { font-size: 14px; line-height: 22px; }
+  .cta__title { font-size: 24px; line-height: 32px; }
+  .cta__btn { width: 100%; }
+
+  /* 푸터 — 세로 스택 */
+  .footer { padding: 48px 0 calc(40px + 76px); }
+  .footer__top { flex-direction: column; }
+  .footer__right { align-items: flex-start; }
+  .footer__links { gap: 16px; }
+
+  /* 시뮬레이터 — 전체 화면 시트. 프리셋 2×2, 3열 → 1열(간격 32) */
+  .modal__top--flush { padding-bottom: 0; border-bottom: 0; }
+  .sim { padding-top: 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .sim-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim-body { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .sim-col--rules .rule-list { display: flex; }
+  .result-box { min-height: 46px; }
+
+  /* 상담예약 1/2 — 2칸 줄 → 1칸씩 */
+  .form-row { flex-direction: column; gap: 20px; }
+  .custom-panel .chip-group__row { gap: 8px; }
+
+  /* 상담예약 2/2 — 날짜 칩 5개 + 선택한 날짜의 시간 6칸 2열 */
+  .slot-days { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .slot-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    border-radius: var(--radius-8);
+    background: var(--neutral-card);
+    box-shadow: inset 0 0 0 1px var(--border-default);
+    color: var(--text-secondary-light);
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .slot-day strong { font-size: 14px; line-height: 22px; font-weight: 600; color: var(--text-primary-light); }
+  .slot-day[aria-selected="true"] { background: var(--neutral-ink); box-shadow: none; color: var(--text-primary-dark); }
+  .slot-day[aria-selected="true"] strong { color: var(--text-primary-dark); }
+  .slot-day.has-pick:not([aria-selected="true"]) { box-shadow: inset 0 0 0 2px var(--neutral-ink); }
+  .slot-day:focus-visible { box-shadow: inset 0 0 0 1px var(--border-default), var(--focus-ring); }
+  .slot-grid { display: block; }
+  .slot-col { display: none; }
+  .slot-col.is-active { display: block; }
+  .slot-col__head { display: none; }
+  .slot-col__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .week-nav .btn { padding: 0 8px; }
+
+  /* 2/2 아래: 요약 위, [이전] · [예약 확정하기] 가로 */
+  .booking-footer { flex-direction: column; align-items: stretch; gap: 12px; }
+  .booking-footer__actions { width: 100%; }
+  .booking-footer__actions .btn { flex: 1 1 0; width: auto; }
+  .booking-footer__actions .btn--secondary { flex: 0 0 auto; }
+
+  /* 예약 완료 — 하단 시트 */
+  .done { padding-top: 40px; }
+  .done__close { top: 12px; right: 12px; }
+}
