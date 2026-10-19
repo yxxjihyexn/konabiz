@@ -24,6 +24,9 @@
     var el = document.getElementById(id);
     if (!el) return;
 
+    /* 챗봇 패널은 자동으로 닫힘 (입력 중 문구 유지) — 포커스는 모달로 */
+    if (window.KonaChat) window.KonaChat.close(true);
+
     /* 다른 모달이 열려 있으면 바꿔 끼움 (시뮬레이터 → 상담예약). 포커스 복귀 대상은 처음 연 버튼 유지 */
     if (current) {
       if (current.el === el) return;

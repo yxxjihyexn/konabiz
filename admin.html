@@ -44,7 +44,7 @@
           <p class="sidebar__name">김철수 님</p>
           <p class="sidebar__meta">가나다테크(주) · 관리자</p>
         </div>
-        <a class="sidebar__link" href="index.html">로그아웃</a>
+        <a class="sidebar__link" href="index.html" data-logout>로그아웃</a>
       </div>
     </aside>
 
@@ -59,8 +59,8 @@
     </main>
   </div>
 
-  <!-- ===================== 챗봇 FAB (전역) ===================== -->
-  <button class="fab-chatbot" type="button" aria-label="챗봇 열기" data-open="chatbot">
+  <!-- ===================== 챗봇 FAB (전역) — 패널은 chatbot.js가 FAB 앞에 만듦 ===================== -->
+  <button class="fab-chatbot" type="button" aria-label="챗봇 열기" aria-controls="chat-panel" aria-expanded="false">
     <img src="assets/icon-chat.svg" alt="" width="24" height="24">
   </button>
 
@@ -74,6 +74,8 @@
   </aside>
 
   <script src="js/common.js"></script>
+  <script src="js/chat-reply.js"></script>
+  <script src="js/chatbot.js"></script>
   <script src="js/mock-data.js"></script>
   <script src="js/sandbox-mode.js"></script>
   <script src="js/app.js"></script>

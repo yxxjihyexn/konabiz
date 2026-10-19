@@ -32,7 +32,7 @@
   }
 
   /* ---------- 클릭 가로채기 (capture — 각 요소의 동작보다 먼저) ----------
-     그대로 둠: 드로어 열기·닫기, 챗봇 FAB, 본문 바로가기
+     그대로 둠: 드로어 열기·닫기, 챗봇 FAB·패널(정상 동작), 본문 바로가기
      지금 화면 링크(로고 · 선택된 메뉴): 이동 없이 머묾 (주소의 ?sandbox=1이 빠지지 않게)
      그 밖: 토스트 */
   var MSG = '체험 화면에서는 실제로 실행되지 않아요';
@@ -40,7 +40,7 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest('a[href], button');
     if (!el) return;
-    if (el.matches('[aria-controls="drawer"], [data-drawer-close], .fab-chatbot, a[href^="#"]')) return;
+    if (el.matches('[aria-controls="drawer"], [data-drawer-close], .fab-chatbot, .chat-panel button, a[href^="#"]')) return;
 
     e.preventDefault();
     e.stopImmediatePropagation();

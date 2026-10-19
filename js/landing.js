@@ -605,7 +605,8 @@
     bk.addEventListener('modal:open', function (e) {
       var opener = e.detail.opener;
       if (bkState.view === 'done') resetBooking();
-      bkState.source = opener && opener.closest('#modal-simulator') ? 'simulator'
+      bkState.source = opener && opener.closest('.fab-chatbot') ? 'chatbot'
+        : opener && opener.closest('#modal-simulator') ? 'simulator'
         : opener && opener.closest('.cta') ? 'closing-cta' : opener && opener.closest('.hero') ? 'hero' : 'landing';
       /* 선택 조건: 시뮬레이터에서 마지막으로 체험한 프리셋 값 → 없으면 기본값(직접 설정) */
       if (bkState.view === '1' && !bk.hasAttribute('data-dirty')) {
@@ -632,6 +633,17 @@
 
     applyCustom(PRESETS[3].custom);
     updateSummary();
+
+    /* ?action=booking — 다른 화면 챗봇의 [상담 예약하기]에서 넘어왔을 때 바로 열기 (새로고침해도 다시 안 열리게 주소에서 뺌)
+       &source=chatbot이면 opener를 FAB로 → 유입 경로 "chatbot", 닫으면 FAB로 포커스 */
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'booking') {
+      var url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      url.searchParams.delete('source');
+      history.replaceState(null, '', url);
+      Kona.openModal('modal-booking', params.get('source') === 'chatbot' ? document.querySelector('.fab-chatbot') : null);
+    }
   }
 
   /* =======================================================
@@ -718,6 +730,8 @@
         setBusy(false);
         var ok = DEMO_ACCOUNTS.some(function (a) { return a.email === email.toLowerCase() && a.password === pw && a.role === role; });
         if (ok) {
+          /* 비로그인 챗봇 대화는 계정에 합치지 않고 새 대화로 (공용 PC 대비) */
+          if (window.KonaChat) window.KonaChat.clear(false);
           window.location.href = NEXT_PAGE[role];
           return;
         }

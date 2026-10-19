@@ -40,6 +40,14 @@
   - `?sandbox=1` 동작은 `js/sandbox-mode.js`(app.js보다 먼저 로드): 계정 예시 문구(`KonaMock.sandbox`), 로그아웃 제거, 임직원관리 비활성 + 꼬리표 "체험 불가", 드로어·챗봇 FAB·`#` 링크 외 클릭은 토스트 Info
   - 예약 정보는 `kona.reservation`의 `preferredLabel`(`10/21(수) 14:00`)로 만들고, 저장값이 없으면 숨김
   - 1024 미만은 탭 이름에서 "미리보기"를 뺌(바 한 줄에 맞추려고)
+- 챗봇(09, 전역): 패널 마크업은 `js/chatbot.js`가 FAB 앞에 만듦(HTML에 복사하지 않음). 답변은 `js/chat-reply.js`의 `KonaChatReply.get()` 하나 — FastAPI 연결 시 이 함수 본문만 fetch로 교체
+  - 예시 답변: 퀵 리플라이 4개는 정해진 문구(도입·비용·상담예약은 [상담 예약하기] 포함), 직접 입력은 "정확한 안내는 상담에서 도와드려요" + [상담 예약하기]. 입력 중 표시 1초
+  - 상태 확인: `?chat=error`(첫 요청만 실패, [다시 보내기]는 성공) · `?chat=offline`. `?chat=` 값이 있으면 패널을 연 채로 시작. sandbox.html은 이 값을 두 iframe에 넘김
+  - 대화 기록: localStorage `kona.chat`(최근 20개, 새 메시지 점 포함). 열림 상태·입력 중 문구는 저장하지 않음. 답변을 기다리다 페이지를 옮기면 그 질문은 실패로 표시. 로그인 성공 → 새 대화, 로그아웃(`data-logout`) → 임시 ID까지 삭제. Sandbox iframe끼리는 `storage` 이벤트로 맞춤
+  - 모달이 열리면 `common.js`가 패널을 닫음(입력 중 문구 유지). [상담 예약하기]: 랜딩은 opener=FAB로 상담예약 모달(유입 경로 `chatbot`), 다른 페이지는 `index.html?action=booking&source=chatbot`(iframe은 바깥 창 이동)
+  - Figma와 다른 점: 입력칸은 textarea 왼쪽 정렬·최대 4줄(7.8), [새 대화 시작]은 아이콘 + aria-label·툴팁. 답변 실패는 Danger 아이콘 16 + Caption(load-error의 "빨강 안 씀"은 패널 전체 실패용)
+  - 767 이하 전체 화면: FAB 숨김, 헤더 닫기 버튼, 열 때 입력칸 포커스 안 함, visualViewport 높이에 맞춤
+- 로컬 서버는 5500 하나만 사용(launch.json 포트 고정). 이미 떠 있으면 새로 띄우지 말고 그 서버로 확인
 
 ## 작업 방식
 - 답변과 진행 상황 설명은 항상 한국어로

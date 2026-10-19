@@ -43,6 +43,16 @@
 
   show(viewFromUrl(), false);
 
+  /* ?chat=error|offline — 챗봇 상태 확인용 값을 두 iframe에 넘김 */
+  var chat = new URLSearchParams(window.location.search).get('chat');
+  if (chat) {
+    document.querySelectorAll('.sandbox-frame').forEach(function (f) {
+      var src = new URL(f.getAttribute('src'), window.location.href);
+      src.searchParams.set('chat', chat);
+      f.src = src.href;
+    });
+  }
+
   /* ---------- 예약 정보: 상담예약 완료 때 저장한 값. 없으면 숨김 ---------- */
   var r = null;
   try { r = JSON.parse(localStorage.getItem('kona.reservation')); } catch (e) { /* 무시 */ }
