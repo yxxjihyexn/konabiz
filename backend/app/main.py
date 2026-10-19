@@ -2,12 +2,24 @@
 
 실행 (backend 폴더에서): uvicorn app.main:app --reload --port 8000
 """
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+from app import db
 from app.routers import health
 from app.static_site import router as static_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.connect()   # 실패해도 예외를 올리지 않음 — 정적 페이지는 계속 제공
+    yield
+    db.close()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="KonaBiz API",
     docs_url="/api/docs",
     redoc_url=None,
