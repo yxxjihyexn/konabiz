@@ -38,7 +38,7 @@
   gap: 16px;
   padding: 24px;
   background: var(--neutral-card);
-  border: 0.5px solid var(--border-default);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);   /* 0.5 Inside */
   border-radius: var(--radius-12);
 }
 .feature-card__title { font-size: 18px; line-height: 26px; font-weight: 600; }
@@ -102,7 +102,7 @@
   gap: 24px;
   padding: 48px;
   background: var(--neutral-card);
-  border: 0.5px solid var(--border-default);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);   /* 0.5 Inside */
   border-radius: var(--radius-12);
 }
 .banner__content {
@@ -130,7 +130,7 @@
   gap: 8px;
   padding: 24px;
   background: var(--neutral-card);
-  border: 0.5px solid var(--border-default);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);   /* 0.5 Inside */
   border-radius: var(--radius-12);
 }
 .price-item:nth-child(2) { gap: 12px; }
@@ -151,7 +151,7 @@
 .price-table__unit { font-size: 14px; line-height: 22px; font-weight: 400; color: var(--text-secondary-light); }
 
 .table .col-type { width: 200px; }
-.table .col-price { width: 160px; text-align: right; }
+.table .col-price { width: 184px; text-align: right; }   /* 단가 160 + 왼쪽 패딩 24 (border-box) */
 .table th, .table td { padding-block: 16px; vertical-align: middle; }
 .table th + td, .table td + td, .table__head th + th { padding-left: 24px; }
 
@@ -162,7 +162,8 @@
   font-weight: 600;
   color: var(--text-secondary-light);
 }
-.table tbody tr { border-bottom: 0.5px solid var(--border-default); }
+/* 행 구분선: tr에는 그림자가 그려지지 않아 칸마다 아래 선 */
+.table tbody tr > * { box-shadow: inset 0 -0.5px 0 var(--border-default); }
 .table tbody th { font-weight: 600; }
 .table tbody .col-desc { color: var(--text-secondary-light); }
 .table tbody .col-price { font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -181,7 +182,7 @@
 }
 .price-note__list li { display: inline; }
 .price-note__list li + li::before { content: " · "; }
-.price-note .text-link { height: 40px; margin-top: -9px; }   /* 글자 22 + 터치 영역 40 → 위아래 9씩 겹침 */
+.price-note .text-link { height: 40px; margin-block: -9px; }   /* 글자 22 + 터치 영역 40 → 위아래 9씩 겹침 */
 
 /* ---------- 7. 도입 절차 ---------- */
 .step-list { display: flex; gap: var(--gap-card); }
@@ -227,6 +228,7 @@
 .footer__inner { display: flex; flex-direction: column; gap: 32px; }
 .footer__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; }
 .footer__company { display: flex; flex-direction: column; gap: 16px; }
+.footer__company .logo { margin-block: -8px; }   /* 로고 24 + 터치 영역 40 → 위아래 8씩 겹쳐 레이아웃 유지 */
 .footer__detail { display: flex; flex-direction: column; gap: 4px; }
 
 .footer__right { display: flex; flex-direction: column; align-items: flex-end; gap: 16px; }
@@ -248,13 +250,13 @@
   flex-direction: column;
   gap: 4px;
   padding-top: 24px;
-  border-top: 0.5px solid var(--border-inverted);
+  box-shadow: inset 0 0.5px 0 var(--border-inverted);
 }
 
 /* =========================================================
    02 결제 시뮬레이터 모달 (1000)
    ========================================================= */
-.modal__top--flush { padding-bottom: 0; border-bottom: 0; }   /* 머리와 본문 사이 구분선 없음 */
+.modal__top--flush { padding-bottom: 0; box-shadow: none; }   /* 머리와 본문 사이 구분선 없음 */
 .sim { padding-top: 24px; padding-bottom: 32px; }
 
 .sim-presets .segment__option { padding: 0 12px; }
@@ -317,7 +319,7 @@
 
 .wallet-row .info-row__value { transition: color 0.2s ease-out; }
 .wallet-row.is-changed .info-row__value { color: var(--text-on-success-tint); }
-.wallet-list .info-row:last-child { border-bottom: 0; }
+.wallet-list .info-row:last-child { box-shadow: none; }
 
 .result-actions { display: flex; flex-direction: column; gap: 8px; }
 
@@ -336,7 +338,7 @@
 .custom-panel {
   padding: 20px;
   background: var(--neutral-card);
-  border: 0.5px solid var(--border-default);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);   /* 0.5 Inside */
   border-radius: var(--radius-12);
 }
 .custom-panel__head {
@@ -402,7 +404,7 @@
 .done__icon img { width: 24px; height: 24px; }
 .done__text { display: flex; flex-direction: column; gap: 4px; }
 .done__title { font-size: 18px; line-height: 26px; font-weight: 600; }
-.done__title:focus { box-shadow: none; }
+.done__title:focus { outline: none; }
 .done__desc { color: var(--text-secondary-light); }
 .done__note { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
 .sandbox-card {
@@ -437,7 +439,7 @@
    ========================================================= */
 @media (max-width: 1023px) {
   .gnb, .header__actions { display: none; }
-  .header__menu { display: inline-flex; margin-right: -8px; }
+  .header__menu { display: inline-flex; }
 
   .banner { padding: 40px; }
 
@@ -452,8 +454,6 @@
    Mobile (≤ 767): 375 기준
    ========================================================= */
 @media (max-width: 767px) {
-  .header__menu { margin-right: -8px; }
-
   /* 공통 타이틀 H2_600 */
   .section__title { font-size: 24px; line-height: 32px; }
 
@@ -481,11 +481,11 @@
     gap: 16px;
     padding: 24px;
     background: var(--neutral-card);
-    border: 0.5px solid var(--border-default);
+    box-shadow: inset 0 0 0 0.5px var(--border-default);
     border-radius: var(--radius-12);
   }
-  .price-item { padding: 0; border: 0; border-radius: 0; background: none; }
-  .price-item + .price-item { padding-top: 16px; border-top: 0.5px solid var(--border-default); }
+  .price-item { padding: 0; box-shadow: none; border-radius: 0; background: none; }
+  .price-item + .price-item { padding-top: 16px; box-shadow: inset 0 0.5px 0 var(--border-default); }
   .price-item__value { font-size: 24px; line-height: 32px; }
 
   .price-table__group { gap: 12px; }
@@ -493,7 +493,6 @@
 
   /* 표 → 헤더 없는 열린 리스트: [타입명 + 특징 | 단가] */
   .table__head { display: none; }
-  .table { border-top: 0.5px solid var(--border-default); }
   .table tbody tr {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -501,7 +500,10 @@
     column-gap: 16px;
     row-gap: 4px;
     padding-block: 16px;
+    box-shadow: inset 0 -0.5px 0 var(--border-default);
   }
+  .table tbody tr > * { box-shadow: none; }
+  .table tbody tr:first-child { box-shadow: inset 0 0.5px 0 var(--border-default), inset 0 -0.5px 0 var(--border-default); }
   .table th, .table td { padding: 0 !important; width: auto !important; }
   .table tbody .col-type { grid-area: type; }
   .table tbody .col-desc { grid-area: desc; }
@@ -514,7 +516,7 @@
   .price-note__list li + li::before { content: "· "; }
 
   /* 도입 절차 — 세로 리스트, 좌측 정렬 */
-  .step-list { flex-direction: column; }
+  .step-list { flex-direction: column; gap: 24px; }
   .guide-step { flex-direction: row; align-items: flex-start; text-align: left; }
   .guide-step__text { flex: 1 1 0; min-width: 0; }
 
@@ -531,7 +533,7 @@
   .footer__links { gap: 16px; }
 
   /* 시뮬레이터 — 전체 화면 시트. 프리셋 2×2, 3열 → 1열(간격 32) */
-  .modal__top--flush { padding-bottom: 0; border-bottom: 0; }
+  .modal__top--flush { padding-bottom: 0; box-shadow: none; }
   .sim { padding-top: 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
   .sim-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sim-body { grid-template-columns: minmax(0, 1fr); gap: 32px; }
@@ -561,7 +563,6 @@
   .slot-day[aria-selected="true"] { background: var(--neutral-ink); box-shadow: none; color: var(--text-primary-dark); }
   .slot-day[aria-selected="true"] strong { color: var(--text-primary-dark); }
   .slot-day.has-pick:not([aria-selected="true"]) { box-shadow: inset 0 0 0 2px var(--neutral-ink); }
-  .slot-day:focus-visible { box-shadow: inset 0 0 0 1px var(--border-default), var(--focus-ring); }
   .slot-grid { display: block; }
   .slot-col { display: none; }
   .slot-col.is-active { display: block; }

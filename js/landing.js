@@ -413,7 +413,7 @@
     /* ---------- 2/2 상담 방법 · 상담 일시 ---------- */
     var HOURS = [10, 11, 14, 15, 16, 17];   /* 점심 12~13시 + 이동 버퍼 → 14시부터 재개 */
     var DAY = ['일', '월', '화', '수', '목', '금', '토'];
-    var MAX_WEEK = 3;
+    var MAX_WEEK = 1;   /* 프로토타입: 예시 주 두 주 (10/19~10/23 · 10/26~10/30) */
     var methodGroup = bk.querySelector('[data-method-group]');
     var addressField = bk.querySelector('[data-field="address"]');
     var addressInput = addressField.querySelector('input');
@@ -430,25 +430,16 @@
     var ymd = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
     var mdLabel = function (d) { return (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; };
 
-    /* 예약 가능한 첫 주의 월요일 (주말이면 다음 주) */
-    var firstMonday = function () {
-      var d = new Date();
-      d.setHours(0, 0, 0, 0);
-      var wd = d.getDay();
-      d.setDate(d.getDate() + (wd === 0 ? 1 : wd === 6 ? 2 : 1 - wd));
-      return d;
-    };
+    /* 예시 예약 주: 2026-10-19(월)부터 두 주 고정. TODO(백엔드): 실제 예약 가능 주·마감 정보로 교체 */
+    var firstMonday = function () { return new Date(2026, 9, 19); };
     var weekDays = function (offset) {
       var mon = firstMonday();
       mon.setDate(mon.getDate() + offset * 7);
       return [0, 1, 2, 3, 4].map(function (i) { var d = new Date(mon); d.setDate(mon.getDate() + i); return d; });
     };
-    /* 마감 여부: 지금부터 1시간 이내·지난 시간 + 예시 마감(날짜·시간으로 정해지는 고정 패턴) */
-    var isClosed = function (d, h) {
-      var t = new Date(d); t.setHours(h);
-      if (t.getTime() < Date.now() + 3600000) return true;
-      return ((d.getDate() * 7 + (d.getMonth() + 1) * 3 + h * 5) % 9) === 0;
-    };
+    /* 예시 마감: 수 10/21 11:00 · 15:00, 목 10/22 10:00 (둘째 주는 마감 없음) */
+    var CLOSED = ['2026-10-21 11', '2026-10-21 15', '2026-10-22 10'];
+    var isClosed = function (d, h) { return CLOSED.indexOf(ymd(d) + ' ' + h) > -1; };
     var weekHasOpen = function (offset) {
       return weekDays(offset).some(function (d) { return HOURS.some(function (h) { return !isClosed(d, h); }); });
     };

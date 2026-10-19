@@ -50,7 +50,8 @@
   /* Effect */
   --shadow-popover: 0 4px 12px rgba(18, 24, 27, 0.12);
   --shadow-modal: 0 4px 8px rgba(18, 24, 27, 0.04), 0 16px 32px rgba(18, 24, 27, 0.08);
-  --focus-ring: 0 0 0 3px var(--cyan-200);
+  --focus-outline: 2px solid var(--cyan-700);   /* #0E7490 */
+  --focus-offset: 2px;
 
   /* Radius */
   --radius-4: 4px;
@@ -115,7 +116,7 @@ table { border-collapse: collapse; width: 100%; }
 th { font-weight: inherit; text-align: left; }
 [hidden] { display: none !important; }
 
-:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-8); }
+:focus-visible { outline: var(--focus-outline); outline-offset: var(--focus-offset); border-radius: var(--radius-8); }
 
 .visually-hidden {
   position: absolute !important;
@@ -143,7 +144,9 @@ th { font-weight: inherit; text-align: left; }
 }
 .narrow { width: min(var(--content-narrow), 100%); }
 
-/* ---------- 4. 공통 컴포넌트 ---------- */
+/* ---------- 4. 공통 컴포넌트 ----------
+   테두리는 모두 box-shadow inset으로 그림 (Figma Stroke Inside — 크기·간격에 더하지 않음)
+   장식·그룹핑 0.5 / 인터랙티브 1 / 한쪽 선은 inset 0 ±0.5px 0 */
 
 /* Button — 높이 48 고정, 패딩 좌우 16, r8, Body Large_600 */
 .btn {
@@ -169,7 +172,6 @@ th { font-weight: inherit; text-align: left; }
   box-shadow: inset 0 0 0 1px var(--border-default);   /* 1px Inside */
 }
 .btn--secondary:hover { background: var(--neutral-canvas); }
-.btn--secondary:focus-visible { box-shadow: inset 0 0 0 1px var(--border-default), var(--focus-ring); }
 
 .btn--ghost { color: var(--text-link-light); }
 .btn--ghost:hover { background: var(--neutral-wash); }
@@ -254,7 +256,7 @@ th { font-weight: inherit; text-align: left; }
 }
 
 /* 로고 */
-.logo { display: inline-flex; align-items: center; border-radius: var(--radius-8); }
+.logo { display: inline-flex; align-items: center; min-height: 40px; border-radius: var(--radius-8); }   /* 터치 영역 최소 40 */
 .logo__img--header { width: 201px; height: 28px; }
 .logo__img--footer { width: 172px; height: 24px; }
 
@@ -274,7 +276,11 @@ th { font-weight: inherit; text-align: left; }
   box-shadow: inset 0 0 0 1px var(--border-default);
   transition: box-shadow 0.15s ease-out;
 }
-.field__control:focus-within { box-shadow: inset 0 0 0 1px var(--cyan-500), var(--focus-ring); }
+.field__control:focus-within {
+  box-shadow: inset 0 0 0 1px var(--cyan-500);
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
 
 .field__input {
   flex: 1 1 auto;
@@ -315,7 +321,7 @@ th { font-weight: inherit; text-align: left; }
 
 /* Error: Danger 보더 + 아이콘 16 + Caption Danger 문구 */
 .field.is-error .field__control { box-shadow: inset 0 0 0 1px var(--danger); }
-.field.is-error .field__control:focus-within { box-shadow: inset 0 0 0 1px var(--danger), var(--focus-ring); }
+.field.is-error .field__control:focus-within { box-shadow: inset 0 0 0 1px var(--danger); }
 .field__error {
   display: flex;
   gap: 4px;
@@ -354,7 +360,6 @@ th { font-weight: inherit; text-align: left; }
   transition: background-color 0.15s ease-out;
 }
 .segment__option:hover { background: var(--neutral-canvas); }
-.segment__option:focus-visible { box-shadow: inset 0 0 0 1px var(--border-default), var(--focus-ring); }
 .segment__option[aria-checked="true"],
 .segment__option[aria-selected="true"],
 .segment__option[aria-pressed="true"] {
@@ -363,9 +368,6 @@ th { font-weight: inherit; text-align: left; }
   color: var(--text-primary-dark);
   font-weight: 600;
 }
-.segment__option[aria-checked="true"]:focus-visible,
-.segment__option[aria-selected="true"]:focus-visible,
-.segment__option[aria-pressed="true"]:focus-visible { box-shadow: var(--focus-ring); }
 .segment__option:disabled {
   background: var(--neutral-canvas);
   box-shadow: none;
@@ -392,9 +394,8 @@ th { font-weight: inherit; text-align: left; }
   white-space: nowrap;
 }
 .chip-toggle:hover { background: var(--neutral-canvas); }
-.chip-toggle:focus-visible { box-shadow: inset 0 0 0 1px var(--border-default), var(--focus-ring); border-radius: var(--radius-full); }
+.chip-toggle:focus-visible { border-radius: var(--radius-full); }
 .chip-toggle[aria-checked="true"] { background: var(--neutral-ink); box-shadow: none; color: var(--text-primary-dark); }
-.chip-toggle[aria-checked="true"]:focus-visible { box-shadow: var(--focus-ring); }
 .chip-toggle[aria-checked="true"]::before {
   content: "";
   width: 16px;
@@ -474,8 +475,9 @@ th { font-weight: inherit; text-align: left; }
   cursor: grab;
   pointer-events: auto;
 }
-.range__input:focus-visible::-webkit-slider-thumb { box-shadow: var(--focus-ring); }
-.range__input:focus-visible::-moz-range-thumb { box-shadow: var(--focus-ring); }
+.range__input:focus-visible { outline: none; }   /* 링은 손잡이에만 — 간격 2 + 선 2 (outline 대신 그림자로 같은 모양) */
+.range__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--neutral-card), 0 0 0 4px var(--cyan-700); }
+.range__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--neutral-card), 0 0 0 4px var(--cyan-700); }
 
 /* 단계 표시 stepper — 원 32 + 라벨, 연결선 1 */
 .stepper { display: flex; align-items: center; gap: 12px; }
@@ -526,7 +528,7 @@ th { font-weight: inherit; text-align: left; }
   align-items: center;
   gap: 16px;
   padding: 12px 0;
-  border-bottom: 0.5px solid var(--border-default);
+  box-shadow: inset 0 -0.5px 0 var(--border-default);
 }
 .info-row__label { color: var(--text-secondary-light); white-space: nowrap; }
 .info-row__value { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
@@ -571,7 +573,7 @@ th { font-weight: inherit; text-align: left; }
   flex-direction: column;
   gap: 24px;
   padding: 32px 32px 24px;
-  border-bottom: 0.5px solid var(--border-default);
+  box-shadow: inset 0 -0.5px 0 var(--border-default);
 }
 .modal__body {
   flex: 1 1 auto;
@@ -591,7 +593,7 @@ th { font-weight: inherit; text-align: left; }
   justify-content: flex-end;
   gap: 8px;
   padding: 24px 32px 32px;
-  border-top: 0.5px solid var(--border-default);
+  box-shadow: inset 0 0.5px 0 var(--border-default);
 }
 
 /* 머리 modal-header: 제목 H3 + 설명 Body Secondary, 오른쪽 닫기 40 */
@@ -643,7 +645,7 @@ th { font-weight: inherit; text-align: left; }
   transition: background-color 0.2s ease-out;
 }
 .fab-chatbot:hover { background: var(--cyan-500-hover); }
-.fab-chatbot:focus-visible { box-shadow: var(--shadow-popover), var(--focus-ring); border-radius: var(--radius-full); }
+.fab-chatbot:focus-visible { border-radius: var(--radius-full); }
 
 /* ---------- 9. 드로어 (Tablet·Mobile) ---------- */
 .drawer-overlay {
@@ -676,7 +678,7 @@ th { font-weight: inherit; text-align: left; }
 
 .drawer__close { position: absolute; top: 8px; right: 12px; }
 
-.drawer__nav li + li { border-top: 0.5px solid var(--border-default); }
+.drawer__nav li + li { box-shadow: inset 0 0.5px 0 var(--border-default); }
 .drawer__link {
   display: flex;
   align-items: center;
