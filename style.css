@@ -785,6 +785,8 @@ a.sidebar__link:hover { background: var(--neutral-canvas); }
 .badge-status {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 52px;             /* 글자 수가 달라도(정지 · 초대됨 · 사용 중) 같은 폭 */
   padding: 4px 8px;
   border-radius: var(--radius-8);
   font-size: 12px;

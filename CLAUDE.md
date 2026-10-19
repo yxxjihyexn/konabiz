@@ -24,6 +24,15 @@
 - 상태 화면은 `?state=`로 전환 (목록에 없는 값은 Default)
   - admin.html: `empty`
   - employee.html: `suspended` · `issuing` · `no-payments` · `loading` · `error`
+  - admin-members.html: `empty` (0명에서 시작, 초대하면 실제로 목록으로 바뀜)
+- 부서는 영업1팀·마케팅팀·개발팀 3개, 대시보드 카드 수는 members에서 계산 (`KonaMock.activeCards()` = 초대됨 + 사용 중, 지금 21 = 6 + 7 + 8). 9.7의 "활성 카드 24장"보다 이 규칙이 우선
+- 임직원관리(admin-members.html · `js/admin-members.js`): 필터·검색·페이지·초대·CSV·⋯ 메뉴·정지·정지 해제·회수는 상태 페이지 없이 실제 동작으로. 바뀐 값은 새로고침하면 처음으로 돌아감
+  - `?dept=개발팀` → 부서 필터(칩 줄 끝 "부서: 개발팀 ×" — Figma에 없어서 추가), `?action=invite|csv` → 모달 바로 열기(열고 나면 주소에서 뺌). 대시보드 빈 상태 버튼은 `?state=empty&action=…`
+  - CSV 업로드 화면은 디자인이 없어 예시 결과(`KonaMock.csvSample`, 24행 중 3행 오류)를 바로 보여줌. 행 검사는 열 때마다 다시 해서, 이미 등록된 이메일은 중복 오류가 됨(21명 추가 뒤 다시 열면 24행 모두 오류)
+  - 모달 버튼 등급(6.9): [취소]는 Ghost, 초대·CSV 초대·카드 정지는 Primary, 카드 회수만 Destructive(이름이 정확히 같을 때만 활성). 순서는 보조 왼쪽 · 주 버튼 오른쪽(간격 12), 모바일 하단 시트는 세로로 쌓고 주 버튼 위(간격 8) — `.modal-actions`
+  - Tablet(768–1023)은 표를 유지하되 초대일 칸을 숨김(본문 688부터 7칸이면 이메일 칸이 사라져서)
+  - 표 행 구분선은 칸마다 inset 그림자로 그리면 칸 경계에 세로 이음새가 보여서 배경 그라디언트(`--row-line`)로 그림
+  - Sandbox에서는 sandbox-mode.js가 임직원관리 메뉴를 "체험 불가"로 바꾸고 대시보드 부서 줄 클릭도 토스트로 막음. admin-members.html에는 sandbox-mode.js를 넣지 않음
 - 모바일 법인카드는 기획서 6.11대로 비율 400:252 유지 (Figma 모바일 프레임은 335×252)
 - 대시보드 하단 2열(카테고리 · 결제 알림)은 1024 미만부터 세로로 쌓음
 - Sandbox(sandbox.html): sandbox-bar 아래에 `admin.html?sandbox=1` · `employee.html?sandbox=1`을 iframe 2개로 겹쳐 띄우고 토글로 전환(Dissolve 200ms). 본문 마크업은 복사하지 않음

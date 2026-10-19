@@ -9,16 +9,17 @@ window.KonaMock = (function () {
   var company = '가나다테크(주)';
 
   /* 05 관리자 대시보드
-     사용액 8,420,000 = 부서별 합계 = 카테고리별 합계(법인경비P 포함) / 활성 카드 24 = 부서별 카드 합계 */
+     사용액 8,420,000 = 부서별 합계 = 카테고리별 합계(법인경비P 포함)
+     활성 카드 수 · 부서별 카드 수는 members에서 계산 (activeCards) */
   var admin = {
     user: { name: '김철수', meta: company + ' · 관리자' },
     period: '10월 1일 ~ 10월 16일 기준',
     budget: 10000000,
     blockedCount: 3,
     departments: [
-      { name: '영업1팀', cards: 8, amount: 3120000 },
-      { name: '마케팅팀', cards: 7, amount: 2480000 },
-      { name: '개발팀', cards: 9, amount: 2820000 }
+      { name: '영업1팀', amount: 3120000 },
+      { name: '마케팅팀', amount: 2480000 },
+      { name: '개발팀', amount: 2820000 }
     ],
     categories: [
       { name: '식대P', used: 3368000, budget: 4000000 },
@@ -52,6 +53,81 @@ window.KonaMock = (function () {
     ]
   };
 
+  /* 08 임직원관리 — 총 24명, 초대일 최신순
+     부서 3개: 영업1팀 8 · 마케팅팀 7 · 개발팀 9명 / 상태: 초대됨 3 · 사용 중 18 · 정지 2 · 회수됨 1
+     활성 카드(초대됨 + 사용 중) 21 = 영업1팀 6 + 마케팅팀 7 + 개발팀 8
+     김민준(개발팀 · 4821)은 06 마이페이지 사용자와 같은 사람 */
+  var DEPTS = ['영업1팀', '마케팅팀', '개발팀'];
+  var today = '2026.10.16';   /* 기준 기간 마지막 날 — 새로 초대한 사람의 초대일 */
+
+  var members = [
+    ['윤채원', 'chaewon.yoon@company.co.kr', '마케팅팀', '9143', 'invited', '2026.10.11'],
+    ['박지호', 'jiho.park@company.co.kr', '영업1팀', '7720', 'invited', '2026.10.10'],
+    ['오시우', 'siwoo.oh@company.co.kr', '개발팀', '0419', 'active', '2026.09.15'],
+    ['한소율', 'soyul.han@company.co.kr', '마케팅팀', '8370', 'active', '2026.09.12'],
+    ['강도윤', 'doyun.kang@company.co.kr', '영업1팀', '2287', 'active', '2026.09.08'],
+    ['정하늘', 'haneul.jung@company.co.kr', '개발팀', '6612', 'suspended', '2026.09.05'],
+    ['최유진', 'yujin.choi.people-operations@company.co.kr', '마케팅팀', '3054', 'active', '2026.09.03'],
+    ['김민준', 'minjun.kim@company.co.kr', '개발팀', '4821', 'active', '2026.09.01'],
+    ['이서연', 'seoyeon.lee@company.co.kr', '마케팅팀', '1937', 'active', '2026.09.01'],
+    ['임건우', 'geonwoo.lim@company.co.kr', '영업1팀', '5506', 'revoked', '2026.08.20'],
+    ['송예준', 'yejun.song@company.co.kr', '개발팀', '3362', 'active', '2026.08.18'],
+    ['문지아', 'jia.moon@company.co.kr', '영업1팀', '7045', 'active', '2026.08.14'],
+    ['배서준', 'seojun.bae@company.co.kr', '개발팀', '1586', 'active', '2026.08.11'],
+    ['조하린', 'harin.jo@company.co.kr', '마케팅팀', '9271', 'active', '2026.08.05'],
+    ['신우진', 'woojin.shin@company.co.kr', '영업1팀', '4408', 'suspended', '2026.07.29'],
+    ['권나은', 'naeun.kwon@company.co.kr', '개발팀', '6630', 'active', '2026.07.22'],
+    ['황준서', 'junseo.hwang@company.co.kr', '영업1팀', '2754', 'active', '2026.07.15'],
+    ['안수아', 'sua.ahn@company.co.kr', '마케팅팀', '8119', 'invited', '2026.07.08'],
+    ['류도현', 'dohyun.ryu@company.co.kr', '개발팀', '5093', 'active', '2026.07.01'],
+    ['홍지우', 'jiwoo.hong@company.co.kr', '영업1팀', '3817', 'active', '2026.06.24'],
+    ['전시윤', 'siyun.jeon@company.co.kr', '개발팀', '7462', 'active', '2026.06.17'],
+    ['고은서', 'eunseo.go@company.co.kr', '마케팅팀', '1208', 'active', '2026.06.10'],
+    ['남현우', 'hyunwoo.nam@company.co.kr', '영업1팀', '6954', 'active', '2026.06.03'],
+    ['서유나', 'yuna.seo@company.co.kr', '개발팀', '0873', 'active', '2026.06.01']
+  ].map(function (r, i) {
+    return { id: i + 1, name: r[0], email: r[1], dept: r[2], last4: r[3], status: r[4], invited: r[5] };
+  });
+
+  /* CSV 일괄 등록 예시 결과 (08_Members_CSVError) — 24행 중 5 · 12 · 18행이 오류, 나머지 21명 정상
+     오류는 화면에서 다시 검사함 (이미 등록된 이메일은 그때그때 중복으로 판단) */
+  var csvSample = {
+    fileName: 'members_1013.csv',
+    rows: [
+      ['이도윤', 'doyun.lee@company.co.kr', '개발팀'],
+      ['박서윤', 'seoyun.park@company.co.kr', '마케팅팀'],
+      ['최하준', 'hajun.choi@company.co.kr', '영업1팀'],
+      ['정유진', 'yujin.jung@company.co.kr', '개발팀'],
+      ['김지훈', 'kim.jh@company', '영업1팀'],
+      ['강민서', 'minseo.kang@company.co.kr', '마케팅팀'],
+      ['윤지후', 'jihoo.yoon@company.co.kr', '영업1팀'],
+      ['장서아', 'seoa.jang@company.co.kr', '개발팀'],
+      ['임하은', 'haeun.lim@company.co.kr', '마케팅팀'],
+      ['한도현', 'dohyeon.han@company.co.kr', '영업1팀'],
+      ['오지민', 'jimin.oh@company.co.kr', '개발팀'],
+      ['김민준', 'minjun.kim@company.co.kr', '개발팀'],
+      ['서준혁', 'junhyuk.seo@company.co.kr', '영업1팀'],
+      ['신예린', 'yerin.shin@company.co.kr', '마케팅팀'],
+      ['권태윤', 'taeyun.kwon@company.co.kr', '개발팀'],
+      ['황보람', 'boram.hwang@company.co.kr', '마케팅팀'],
+      ['송민재', 'minjae.song@company.co.kr', '영업1팀'],
+      ['', 'chaeeun.yu@company.co.kr', '개발팀'],
+      ['노현서', 'hyunseo.noh@company.co.kr', '마케팅팀'],
+      ['백승우', 'seungwoo.baek@company.co.kr', '영업1팀'],
+      ['하지원', 'jiwon.ha@company.co.kr', '개발팀'],
+      ['문채윤', 'chaeyun.moon@company.co.kr', '마케팅팀'],
+      ['구민혁', 'minhyuk.koo@company.co.kr', '영업1팀'],
+      ['유하람', 'haram.yu@company.co.kr', '개발팀']
+    ].map(function (r, i) { return { row: i + 1, name: r[0], email: r[1], dept: r[2] }; })
+  };
+
+  /* 활성 카드 = 초대됨 + 사용 중 (정지·회수는 결제 불가). dept를 주면 그 부서만 */
+  function activeCards(dept) {
+    return members.filter(function (m) {
+      return (m.status === 'invited' || m.status === 'active') && (!dept || m.dept === dept);
+    }).length;
+  }
+
   /* 07 Sandbox — 사이드바 계정은 예시 문구 (숫자가 예시라 고객의 실제 회사명과 섞이지 않게) */
   var sandbox = {
     admin: { name: '체험 관리자', meta: '예시 회사 · 관리자' },
@@ -67,5 +143,9 @@ window.KonaMock = (function () {
     return b;
   }
 
-  return { company: company, admin: admin, employee: employee, sandbox: sandbox, POCKET_NAME: POCKET_NAME, balances: balances };
+  return {
+    company: company, admin: admin, employee: employee, sandbox: sandbox,
+    DEPTS: DEPTS, today: today, members: members, csvSample: csvSample, activeCards: activeCards,
+    POCKET_NAME: POCKET_NAME, balances: balances
+  };
 })();

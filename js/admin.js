@@ -14,7 +14,7 @@
 
   /* ---------- 숫자 카드 4개 ---------- */
   var used = D.departments.reduce(function (s, d) { return s + d.amount; }, 0);
-  var cards = D.departments.reduce(function (s, d) { return s + d.cards; }, 0);
+  var cards = KonaMock.activeCards();   /* = 부서별 카드 수 합계 */
   var metrics = [
     ['이번 달 사용액', empty ? 0 : used, '원'],
     ['이번 달 예산', D.budget, '원'],
@@ -45,8 +45,8 @@
             '<p class="empty-step__title">' + s[0] + '</p><p class="empty-step__desc">' + s[1] + '</p></li>';
         }).join('') + '</ol>' +
         '<div class="empty-state__actions">' +
-          '<a class="btn btn--secondary" href="admin-members.html?action=csv">CSV로 한 번에 등록</a>' +
-          '<a class="btn btn--primary" href="admin-members.html?action=invite">임직원 초대하기</a>' +
+          '<a class="btn btn--secondary" href="admin-members.html?state=empty&amp;action=csv">CSV로 한 번에 등록</a>' +
+          '<a class="btn btn--primary" href="admin-members.html?state=empty&amp;action=invite">임직원 초대하기</a>' +
         '</div>' +
       '</section>';
     return;
@@ -56,7 +56,7 @@
   var dept = D.departments.map(function (d) {
     return '<li><a class="dept-row" href="admin-members.html?dept=' + encodeURIComponent(d.name) + '">' +
       '<span class="dept-row__name">' + d.name + '</span>' +
-      '<span class="dept-row__value">카드 ' + d.cards + '장 · ' + A.won(d.amount) +
+      '<span class="dept-row__value">카드 ' + KonaMock.activeCards(d.name) + '장 · ' + A.won(d.amount) +
       '<img src="assets/icon-chevron-right-line.svg" alt="" width="20" height="20"></span></a></li>';
   }).join('');
 

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>임직원 관리 — 코나비즈 관리자</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-app="admin">
+  <a class="skip-link" href="#main">본문 바로가기</a>
+
+  <div class="app">
+    <!-- ===================== 상단 바 (1024 미만) ===================== -->
+    <header class="app-topbar">
+      <a class="logo" href="admin.html" aria-label="코나비즈 관리자 대시보드">
+        <img class="logo__img logo__img--header" src="assets/logo-ink.svg" alt="" width="172" height="24">
+      </a>
+      <button class="icon-btn" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="drawer">
+        <img src="assets/icon-menu.svg" alt="" width="24" height="24">
+      </button>
+    </header>
+
+    <!-- ===================== 사이드바 (admin-sidebar, Role=Admin) ===================== -->
+    <aside class="sidebar">
+      <div class="sidebar__inner">
+        <a class="logo sidebar__logo" href="admin.html" aria-label="코나비즈 관리자 대시보드">
+          <img src="assets/logo-ink.svg" alt="" width="186" height="26">
+        </a>
+        <div class="sidebar__divider" aria-hidden="true"></div>
+        <nav aria-label="관리자 메뉴">
+          <ul class="sidebar__nav">
+            <li><a class="sidebar__link" href="admin.html">대시보드</a></li>
+            <li><span class="sidebar__link" aria-disabled="true">카드관리 <span class="sidebar__soon">준비 중</span></span></li>
+            <li><a class="sidebar__link" href="admin-members.html" aria-current="page">임직원관리</a></li>
+            <li><span class="sidebar__link" aria-disabled="true">결제내역 <span class="sidebar__soon">준비 중</span></span></li>
+            <li><span class="sidebar__link" aria-disabled="true">설정 <span class="sidebar__soon">준비 중</span></span></li>
+          </ul>
+        </nav>
+        <div class="sidebar__spacer"></div>
+        <div class="sidebar__divider" aria-hidden="true"></div>
+        <div class="sidebar__account">
+          <p class="sidebar__name">김철수 님</p>
+          <p class="sidebar__meta">가나다테크(주) · 관리자</p>
+        </div>
+        <a class="sidebar__link" href="index.html">로그아웃</a>
+      </div>
+    </aside>
+
+    <!-- ===================== 본문 ===================== -->
+    <main id="main" class="app-main" aria-labelledby="page-title">
+      <div class="page-header page-header--row">
+        <div class="page-header__text">
+          <h1 id="page-title" class="page-header__title">임직원 관리</h1>
+          <p class="page-header__desc" data-total></p>
+        </div>
+        <div class="page-header__actions" data-list-only>
+          <button class="btn btn--secondary" type="button" data-open="csv">CSV로 한 번에 등록</button>
+          <button class="btn btn--primary" type="button" data-open="invite">임직원 초대하기</button>
+        </div>
+      </div>
+
+      <!-- 도구 막대: 상태 필터 칩 (+ 부서 필터) · 검색 -->
+      <div class="members-toolbar" data-list-only>
+        <div class="members-toolbar__filters">
+          <div class="filter-chips" role="radiogroup" aria-label="상태 필터" data-filters></div>
+          <button class="filter-chip filter-chip--dept" type="button" data-dept-clear hidden></button>
+        </div>
+        <div class="input-search">
+          <img class="input-search__icon" src="assets/icon-search.svg" alt="" width="20" height="20">
+          <input class="input-search__input" type="search" placeholder="이름 또는 이메일로 검색" aria-label="이름 또는 이메일로 검색" autocomplete="off" data-search>
+          <button class="icon-btn input-search__clear" type="button" aria-label="검색어 지우기" data-search-clear hidden>
+            <img src="assets/icon-clear.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+      </div>
+
+      <!-- 목록: PC·Tablet 표 / Mobile 카드 목록 (CSS로 하나만 보임) -->
+      <section class="member-table" aria-label="임직원 목록" data-list-only>
+        <table class="member-table__table">
+          <thead>
+            <tr>
+              <th scope="col" class="col-name">이름</th>
+              <th scope="col" class="col-email">이메일</th>
+              <th scope="col" class="col-dept">부서</th>
+              <th scope="col" class="col-card">카드</th>
+              <th scope="col" class="col-status">상태</th>
+              <th scope="col" class="col-date">초대일</th>
+              <th scope="col" class="col-more"><span class="visually-hidden">관리</span></th>
+            </tr>
+          </thead>
+          <tbody data-rows></tbody>
+        </table>
+        <ul class="member-cards" data-cards></ul>
+
+        <div class="member-table__none" data-none hidden></div>
+
+        <div class="table-footer" data-footer>
+          <p class="table-footer__range" data-range></p>
+          <nav class="pager" aria-label="페이지 이동" data-pager></nav>
+        </div>
+      </section>
+
+      <div data-empty hidden></div>
+      <p class="visually-hidden" aria-live="polite" data-live></p>
+    </main>
+  </div>
+
+  <!-- ===================== 행 ⋯ 메뉴 (공용 1개 — 열 때 상태별 항목을 채움) ===================== -->
+  <div class="row-menu-overlay" data-menu-overlay hidden></div>
+  <div class="row-menu" id="row-menu" role="menu" aria-label="임직원 관리 메뉴" data-menu hidden></div>
+
+  <!-- ===================== 모달: 임직원 초대 (480) ===================== -->
+  <div id="modal-invite" class="modal modal--sm" hidden>
+    <div class="modal__overlay" data-modal-close></div>
+    <section class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="invite-title" aria-describedby="invite-desc">
+      <div class="modal__body modal__body--plain">
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="invite-title" class="modal-header__title">임직원 초대</h2>
+            <p id="invite-desc" class="modal-header__desc">초대 메일과 함께 법인카드가 바로 발급돼요.</p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
+            <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+
+        <form class="invite-form" id="invite-form" novalidate>
+          <div class="invite-form__fields">
+            <div class="field" data-field="name">
+              <label class="field__label" for="invite-name">이름</label>
+              <div class="field__control"><input id="invite-name" name="name" class="field__input" type="text" autocomplete="off" placeholder="예: 정다은" aria-describedby="invite-name-err"></div>
+              <p id="invite-name-err" class="field__error"></p>
+            </div>
+            <div class="field" data-field="email">
+              <label class="field__label" for="invite-email">이메일</label>
+              <div class="field__control"><input id="invite-email" name="email" class="field__input" type="email" autocomplete="off" placeholder="예: daeun.jung@company.co.kr" aria-describedby="invite-email-err"></div>
+              <p id="invite-email-err" class="field__error"></p>
+            </div>
+            <div class="field" data-field="dept">
+              <label class="field__label" for="invite-dept">부서 (선택)</label>
+              <div class="field__control"><input id="invite-dept" name="dept" class="field__input" type="text" autocomplete="off" placeholder="예: 개발팀" list="invite-dept-list"></div>
+              <datalist id="invite-dept-list"></datalist>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn--ghost" type="button" data-modal-close>취소</button>
+            <button class="btn btn--primary" type="submit" data-invite-submit disabled>초대하고 카드 발급하기</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 모달: CSV로 한 번에 등록 — 오류 결과 (720, 모바일 전체 화면 시트) ===================== -->
+  <div id="modal-csv" class="modal modal--md modal--sheet-full modal--flat" hidden>
+    <div class="modal__overlay" data-modal-close></div>
+    <section class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="csv-title" aria-describedby="csv-desc">
+      <div class="modal__top">
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="csv-title" class="modal-header__title">CSV로 한 번에 등록</h2>
+            <p id="csv-desc" class="modal-header__desc" data-csv-file></p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
+            <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+      </div>
+      <div class="modal__body" data-csv-body></div>
+      <div class="modal__footer modal-actions modal-actions--split">
+        <a class="text-link text-link--cyan text-link--strong text-link--icon" href="#" data-csv-template>
+          <img src="assets/icon-download.svg" alt="" width="20" height="20">CSV 양식 다시 받기
+        </a>
+        <div class="modal-actions__group">
+          <button class="btn btn--secondary" type="button" data-csv-reupload>파일 다시 올리기</button>
+          <button class="btn btn--primary" type="button" data-csv-submit></button>
+        </div>
+        <input class="visually-hidden" type="file" accept=".csv,text/csv" tabindex="-1" aria-hidden="true" data-csv-file-input>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 모달: 카드 정지 확인 (480) — 열리면 [취소]에 포커스 ===================== -->
+  <div id="modal-suspend" class="modal modal--sm" hidden>
+    <div class="modal__overlay" data-modal-close></div>
+    <section class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="suspend-title" aria-describedby="suspend-sub suspend-desc">
+      <div class="modal__body modal__body--plain">
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="suspend-title" class="modal-header__title" data-target-title></h2>
+            <p id="suspend-sub" class="modal-header__desc" data-target-sub></p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
+            <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+        <p id="suspend-desc" class="modal-text">정지하면 바로 결제가 막혀요. 언제든 다시 해제할 수 있어요.</p>
+        <div class="modal-actions">
+          <button class="btn btn--ghost" type="button" data-modal-close data-autofocus>취소</button>
+          <button class="btn btn--primary" type="button" data-suspend-submit>카드 정지하기</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 모달: 카드 회수 확인 (480, 위험 작업) ===================== -->
+  <div id="modal-revoke" class="modal modal--sm" hidden>
+    <div class="modal__overlay" data-modal-close></div>
+    <section class="modal__panel" role="alertdialog" aria-modal="true" aria-labelledby="revoke-title" aria-describedby="revoke-sub revoke-alert">
+      <div class="modal__body modal__body--plain">
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="revoke-title" class="modal-header__title" data-target-title></h2>
+            <p id="revoke-sub" class="modal-header__desc" data-target-sub></p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
+            <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+        <div class="alert-box" id="revoke-alert">
+          <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
+          <div class="alert-box__text">
+            <p class="alert-box__title">회수하면 되돌릴 수 없어요</p>
+            <p>카드가 바로 해지되어 결제가 막히고, 계정도 비활성화돼요. 다시 사용하려면 새로 초대해야 해요.</p>
+          </div>
+        </div>
+        <p class="modal-text">잠시만 사용을 막으려면 회수 대신 <strong>카드 정지</strong>를 이용해주세요.</p>
+        <form class="revoke-form" id="revoke-form" novalidate>
+          <div class="field">
+            <label class="field__label" for="revoke-name" data-revoke-label></label>
+            <div class="field__control"><input id="revoke-name" class="field__input" type="text" autocomplete="off" placeholder="이름 입력"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn--ghost" type="button" data-modal-close>취소</button>
+            <button class="btn btn--destructive" type="submit" data-revoke-submit disabled>카드 회수하기</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 챗봇 FAB (전역) ===================== -->
+  <button class="fab-chatbot" type="button" aria-label="챗봇 열기" data-open="chatbot">
+    <img src="assets/icon-chat.svg" alt="" width="24" height="24">
+  </button>
+
+  <!-- ===================== 드로어 (1024 미만) — 사이드바 내용을 app.js가 복사 ===================== -->
+  <div class="drawer-overlay" data-drawer-close hidden></div>
+  <aside id="drawer" class="drawer drawer--app" role="dialog" aria-modal="true" aria-label="메뉴" hidden>
+    <button class="icon-btn drawer__close" type="button" aria-label="메뉴 닫기" data-drawer-close>
+      <img src="assets/icon-close.svg" alt="" width="20" height="20">
+    </button>
+    <div class="drawer__body" data-drawer-body></div>
+  </aside>
+
+  <script src="js/common.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/admin-members.js"></script>
+</body>
+</html>
