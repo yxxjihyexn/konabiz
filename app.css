@@ -1,0 +1,173 @@
+/* =========================================================
+   코나비즈 — app.css (05 관리자 대시보드 · 06 임직원 마이페이지)
+   앱 틀·패널·배지·빈 상태 등 공통은 style.css
+   기준: Figma PC 473:4577 · 473:5279 · 499:2838 외 상태 5종 / Mobile 551:4746
+   ========================================================= */
+
+/* ---------- 공통: 결제 행 (대시보드 알림 · 마이페이지 결제내역) ---------- */
+.pay-list { display: flex; flex-direction: column; }
+.pay-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  box-shadow: inset 0 -0.5px 0 var(--border-default);
+}
+.pay-row:last-child { box-shadow: none; }
+.pay-row__icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
+.pay-row__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pay-row__title { font-weight: 600; }
+.pay-row__meta { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.pay-row__reason { font-size: 12px; line-height: 18px; color: var(--danger); }
+.pay-row__amount { flex-shrink: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pay-row.is-blocked .pay-row__amount { color: var(--text-secondary-light); }   /* 차단 금액은 흐리게(차감 없음) */
+
+/* =========================================================
+   05 관리자 대시보드
+   ========================================================= */
+/* 숫자 카드 metric-card 4열 */
+.metric-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  background: var(--neutral-card);
+  border-radius: var(--radius-12);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);
+}
+.metric-card__label { color: var(--text-secondary-light); }
+.metric-card__value { display: flex; align-items: flex-end; gap: 2px; }
+.metric-card__num { font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.metric-card__unit { font-size: 16px; line-height: 26px; color: var(--text-secondary-light); }
+
+/* 부서별 카드 현황 — 줄 클릭 → 임직원관리 해당 부서 */
+.dept-list { display: flex; flex-direction: column; }
+.dept-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  box-shadow: inset 0 -0.5px 0 var(--border-default);
+}
+.dept-row:last-child { box-shadow: none; }
+.dept-row:hover .dept-row__name { color: var(--text-primary-light); }
+.dept-row__name { color: var(--text-secondary-light); }
+.dept-row__value { display: flex; align-items: center; gap: 8px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dept-row__value img { width: 20px; height: 20px; }
+
+/* 하단 2열: 카테고리별 지출 / 최근 결제 알림(438) */
+.dash-bottom { display: flex; gap: 24px; align-items: stretch; }
+.dash-bottom__cat { flex: 1 1 auto; min-width: 0; }
+.dash-bottom__alert { flex: 0 0 438px; min-width: 0; }
+
+.cat-list { display: flex; flex-direction: column; gap: 20px; }
+.cat-row { display: flex; flex-direction: column; gap: 8px; }
+.cat-row__head { display: flex; justify-content: space-between; gap: 12px; }
+.cat-row__name { font-weight: 600; }
+.cat-row__amount { color: var(--text-secondary-light); font-variant-numeric: tabular-nums; text-align: right; }
+.cat-row__bar { display: flex; align-items: center; gap: 12px; }
+.cat-row__pct { flex-shrink: 0; width: 40px; font-size: 12px; line-height: 18px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.cat-divider { height: 0.5px; margin-bottom: -0.5px; background: var(--border-default); }
+.cat-expense { padding: 12px 0; display: flex; justify-content: space-between; gap: 16px; }
+.cat-expense__label { color: var(--text-secondary-light); }
+.cat-expense__value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Empty — 안내 3단계 (guide-step Small) */
+.empty-steps { display: flex; gap: 40px; }
+.empty-step { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 240px; }
+.empty-step__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-wash);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.empty-step__title { font-weight: 600; }
+.empty-step__desc { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
+/* =========================================================
+   06 임직원 마이페이지
+   ========================================================= */
+.mypage { display: flex; gap: 24px; align-items: flex-start; }
+.mypage__left { flex: 0 0 400px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.mypage__right { flex: 1 1 auto; min-width: 0; }
+.card-area { display: flex; flex-direction: column; gap: 8px; }
+
+/* 법인카드 corp-card — 400 × 252 (실제 카드 비율), Ink, r16, 패딩 24 */
+.corp-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 400 / 252;
+  padding: 24px;
+  border-radius: var(--radius-16);
+  background: var(--neutral-ink);
+  color: var(--text-primary-dark);
+}
+.corp-card__top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.corp-card__name { font-weight: 600; }
+.corp-card__bottom { display: flex; flex-direction: column; gap: 4px; }
+.corp-card__number { font-size: 16px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.corp-card__holder { font-size: 12px; line-height: 18px; color: var(--text-secondary-dark); }
+.corp-card.is-suspended .corp-card__number { color: var(--text-secondary-dark); }   /* 정지: 번호 흐리게 */
+
+/* 발급 중 — 점선 자리 (점선은 그림자로 그릴 수 없어 border 사용, box-sizing으로 크기 유지) */
+.corp-card--issuing {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--neutral-card);
+  border: 1px dashed var(--border-default);
+  color: var(--text-primary-light);
+  text-align: center;
+}
+.corp-card--issuing img { width: 24px; height: 24px; }
+.corp-card__issuing-title { font-weight: 600; }
+.corp-card__issuing-desc { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
+/* 카드 분실신고 · 잠금 (준비 중, 비활성) */
+.card-help { display: flex; justify-content: flex-end; align-items: center; gap: 4px; color: var(--text-disabled-light); }
+.card-help__soon { font-size: 12px; line-height: 18px; color: var(--text-muted-light); }
+
+/* 남은 포인트 */
+.points-head { display: flex; flex-direction: column; gap: 4px; }
+.points-head__label { font-size: 14px; line-height: 22px; font-weight: 400; color: var(--text-secondary-light); }   /* h2지만 Body_400 */
+.points-head__total { font-size: 32px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }   /* H1 */
+.points-list .info-row:last-child { box-shadow: none; }
+.points-divider { height: 0.5px; margin-bottom: -0.5px; background: var(--border-default); }
+.points-expense { box-shadow: none; }
+
+/* 최근 결제내역 */
+.history-end { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); text-align: center; }
+
+/* Loading 스켈레톤 — 실제 블록과 같은 크기 */
+.skeleton--card { aspect-ratio: 400 / 252; }
+.skeleton--points { height: 346px; }
+.skeleton--history { height: 414px; }
+
+/* =========================================================
+   반응형 (기획서 6.11)
+   ========================================================= */
+@media (max-width: 1023px) {
+  .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 4열 → 2열 */
+  .dash-bottom { flex-direction: column; }                           /* 알림 438 고정이면 카테고리 칸이 226까지 좁아짐 → 세로 */
+  .dash-bottom__alert { flex-basis: auto; }
+}
+
+@media (max-width: 767px) {
+  .metric-row { grid-template-columns: minmax(0, 1fr); gap: 16px; } /* → 1열 */
+  .empty-steps { flex-direction: column; gap: 24px; align-items: center; }
+  .empty-step { width: auto; }
+
+  /* 마이페이지: 카드 → 남은 포인트 → 최근 결제내역 세로, 카드는 전체 폭 + 비율 400:252 유지 */
+  .mypage { flex-direction: column; }
+  .mypage__left { flex-basis: auto; width: 100%; }
+  .mypage__right { width: 100%; }
+}

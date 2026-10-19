@@ -687,6 +687,170 @@ th { font-weight: inherit; text-align: left; }
   text-align: left;
 }
 
+/* ---------- 10. 앱 화면 틀 (관리자 · 임직원 · Sandbox 공통) ----------
+   PC: 사이드바 240 + 본문(패딩 40/40/100, 요소 간격 24) / 1024 미만: 상단 바 56 + 오른쪽 드로어 */
+.app { display: flex; min-height: 100vh; min-height: 100dvh; }
+
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: var(--content-full);     /* 1200 = 패딩 40 + 콘텐츠 1120 + 패딩 40 */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 40px 40px 100px;
+}
+.page-header { display: flex; flex-direction: column; gap: 4px; }
+.page-header__title { font-size: 24px; line-height: 32px; font-weight: 600; }   /* H2_600 */
+.page-header__desc { color: var(--text-secondary-light); }
+
+/* 사이드바 admin-sidebar — Card 배경 + 오른쪽 경계선 0.5, 패딩 24, 간격 12 */
+.sidebar {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  width: 240px;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--neutral-card);
+  box-shadow: inset -0.5px 0 0 var(--border-default);
+}
+.sidebar__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  overflow-y: auto;
+}
+.sidebar__logo { align-self: flex-start; margin-block: -7px; }   /* 로고 26 + 터치 영역 40 → 위아래 7씩 겹쳐 레이아웃 유지 */
+.sidebar__logo img { width: 186px; height: 26px; }
+.sidebar__divider { flex-shrink: 0; height: 0.5px; margin-bottom: -0.5px; background: var(--border-default); }   /* 선은 그리되 높이는 0 (Figma 구분선) */
+.sidebar__nav { display: flex; flex-direction: column; gap: 8px; }
+.sidebar__spacer { flex: 1 1 auto; }
+
+/* 메뉴 항목 높이 42, 라운드 8 */
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: var(--radius-8);
+  color: var(--text-secondary-light);
+  text-align: left;
+}
+a.sidebar__link:hover { background: var(--neutral-canvas); }
+.sidebar__link[aria-current="page"] { background: var(--neutral-wash); color: var(--text-primary-light); font-weight: 600; }
+.sidebar__link[aria-disabled="true"] { color: var(--text-disabled-light); cursor: default; }
+.sidebar__soon { font-size: 12px; line-height: 18px; color: var(--text-muted-light); }
+
+.sidebar__account { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
+.sidebar__name { font-weight: 600; }
+.sidebar__meta { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
+/* 상단 바 (1024 미만) — 로고 + 메뉴 버튼, 배경 없음 */
+.app-topbar { display: none; }
+
+/* 앱 드로어 — 사이드바 내용을 그대로 넣고 오른쪽 위 닫기 40 */
+.drawer--app { padding: 0; justify-content: flex-start; }
+.drawer--app .drawer__close { top: 17px; }
+.drawer--app .drawer__body { height: 100%; }
+.drawer--app .sidebar__inner { padding: 24px; }
+
+/* ---------- 11. 앱 공통 블록 ---------- */
+/* 패널: Card + 0.5 Inside, r12, 패딩 24, 간격 16 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--neutral-card);
+  border-radius: var(--radius-12);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);
+}
+.panel__title { font-size: 16px; line-height: 26px; font-weight: 600; }
+
+/* 상태 배지 badge-status — 비인터랙티브 */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-8);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-status--invited { background: var(--cyan-50); color: var(--text-link-light); }
+.badge-status--active { background: var(--success-tint); color: var(--text-on-success-tint); }
+.badge-status--suspended { background: var(--danger-tint); color: var(--text-on-danger-tint); }
+.badge-status--revoked { background: var(--neutral-wash); color: var(--text-secondary-light); }
+
+/* 빈 상태 empty-state — 제목 H3 + 설명 (+ 단계 · 버튼), 가운데 정렬 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 64px 40px;
+  text-align: center;
+}
+.empty-state--panel {             /* 패널 자체가 빈 상태일 때 */
+  background: var(--neutral-card);
+  border-radius: var(--radius-12);
+  box-shadow: inset 0 0 0 0.5px var(--border-default);
+}
+.empty-state__text { display: flex; flex-direction: column; gap: 8px; }
+.empty-state__title { font-size: 18px; line-height: 26px; font-weight: 600; }
+.empty-state__desc { color: var(--text-secondary-light); }
+.empty-state__actions { display: flex; gap: 12px; }
+
+/* 불러오기 실패 load-error — 빨간색 쓰지 않음 */
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.load-error__icon { width: 24px; height: 24px; }
+.load-error__text { display: flex; flex-direction: column; gap: 4px; }
+.load-error__title { font-weight: 600; }
+.load-error__desc { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
+/* 스켈레톤 — Wash, r12 */
+.skeleton { background: var(--neutral-wash); border-radius: var(--radius-12); }
+
+/* 진행 막대 — 트랙 8 Wash, 채움 Ink */
+.progress { flex: 1 1 auto; height: 8px; border-radius: var(--radius-full); background: var(--neutral-wash); overflow: hidden; }
+.progress__fill { height: 100%; border-radius: var(--radius-full); background: var(--neutral-ink); }
+
+/* 앱 화면 중단점 */
+@media (max-width: 1023px) {
+  .sidebar { display: none; }
+  .app { flex-direction: column; }
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 40px;
+  }
+  .app-topbar .logo__img--header { width: 172px; height: 24px; }
+  .app-main { max-width: none; }
+}
+@media (max-width: 767px) {
+  .app-topbar { padding: 0 20px; }
+  .app-main { padding: 24px 20px 100px; }
+  .empty-state { padding: 48px 20px; gap: 32px; }
+  .empty-state__actions { flex-direction: column-reverse; width: 100%; }
+  .empty-state__actions .btn { width: 100%; }
+}
+
 /* =========================================================
    Mobile (≤ 767): 375 기준
    ========================================================= */

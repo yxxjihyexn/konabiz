@@ -77,7 +77,7 @@
       var opener = openBtn;
       if (drawerEl && window.KonaDrawer) {
         window.KonaDrawer.close();
-        opener = document.querySelector('.header__menu');
+        opener = document.querySelector('[aria-controls="drawer"][aria-expanded]');
       }
       openModal(id, current ? null : opener);
       return;
@@ -178,7 +178,7 @@
   'use strict';
   var drawer = document.getElementById('drawer');
   var overlay = document.querySelector('.drawer-overlay');
-  var opener = document.querySelector('.header__menu');
+  var opener = document.querySelector('[aria-controls="drawer"][aria-expanded]');   /* 랜딩 햄버거 · 앱 상단 바 메뉴 버튼 */
   if (!drawer || !overlay || !opener) return;
 
   var focusables = function () {
@@ -194,7 +194,7 @@
     });
     opener.setAttribute('aria-expanded', 'true');
     document.body.classList.add('is-locked');
-    focusables()[1].focus(); /* 첫 메뉴(제품)에 포커스 */
+    (drawer.querySelector('[data-drawer-first]') || focusables()[1]).focus(); /* 첫 메뉴에 포커스 */
   }
 
   function close() {

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 카드 — 코나비즈</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문 바로가기</a>
+
+  <div class="app">
+    <!-- ===================== 상단 바 (1024 미만) ===================== -->
+    <header class="app-topbar">
+      <a class="logo" href="employee.html" aria-label="코나비즈 내 카드">
+        <img class="logo__img logo__img--header" src="assets/logo-ink.svg" alt="" width="172" height="24">
+      </a>
+      <button class="icon-btn" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="drawer">
+        <img src="assets/icon-menu.svg" alt="" width="24" height="24">
+      </button>
+    </header>
+
+    <!-- ===================== 사이드바 (admin-sidebar, Role=Employee) ===================== -->
+    <aside class="sidebar">
+      <div class="sidebar__inner">
+        <a class="logo sidebar__logo" href="employee.html" aria-label="코나비즈 내 카드">
+          <img src="assets/logo-ink.svg" alt="" width="186" height="26">
+        </a>
+        <div class="sidebar__divider" aria-hidden="true"></div>
+        <nav aria-label="임직원 메뉴">
+          <ul class="sidebar__nav">
+            <li><a class="sidebar__link" href="employee.html" aria-current="page">내 카드</a></li>
+            <li><span class="sidebar__link" aria-disabled="true">결제내역 <span class="sidebar__soon">준비 중</span></span></li>
+            <li><span class="sidebar__link" aria-disabled="true">설정 <span class="sidebar__soon">준비 중</span></span></li>
+            <li><span class="sidebar__link" aria-disabled="true">가이드 <span class="sidebar__soon">준비 중</span></span></li>
+          </ul>
+        </nav>
+        <div class="sidebar__spacer"></div>
+        <div class="sidebar__divider" aria-hidden="true"></div>
+        <div class="sidebar__account">
+          <p class="sidebar__name">김민준 님</p>
+          <p class="sidebar__meta">가나다테크(주) · 개발팀</p>
+        </div>
+        <a class="sidebar__link" href="index.html">로그아웃</a>
+      </div>
+    </aside>
+
+    <!-- ===================== 본문 ===================== -->
+    <main id="main" class="app-main" aria-labelledby="page-title">
+      <div class="page-header">
+        <h1 id="page-title" class="page-header__title">내 카드</h1>
+      </div>
+      <div class="mypage">
+        <div class="mypage__left">
+          <div class="card-area" data-card-area></div>
+          <section class="panel" aria-labelledby="points-title" data-points></section>
+        </div>
+        <div class="mypage__right">
+          <section class="panel" aria-labelledby="history-title" data-history></section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== 챗봇 FAB (전역) ===================== -->
+  <button class="fab-chatbot" type="button" aria-label="챗봇 열기" data-open="chatbot">
+    <img src="assets/icon-chat.svg" alt="" width="24" height="24">
+  </button>
+
+  <!-- ===================== 드로어 (1024 미만) — 사이드바 내용을 app.js가 복사 ===================== -->
+  <div class="drawer-overlay" data-drawer-close hidden></div>
+  <aside id="drawer" class="drawer drawer--app" role="dialog" aria-modal="true" aria-label="메뉴" hidden>
+    <button class="icon-btn drawer__close" type="button" aria-label="메뉴 닫기" data-drawer-close>
+      <img src="assets/icon-close.svg" alt="" width="20" height="20">
+    </button>
+    <div class="drawer__body" data-drawer-body></div>
+  </aside>
+
+  <script src="js/common.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/employee.js"></script>
+</body>
+</html>
