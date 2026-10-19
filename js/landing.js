@@ -569,6 +569,7 @@
           contactName: get('bk-name'), contactTitle: get('bk-position'), phone: get('bk-phone'), email: get('bk-email'),
           consultationType: bkState.method, address: addressInput.value.trim(),
           preferredDate: bkState.slot.day, preferredTime: hh(bkState.slot.hour),
+          preferredLabel: (d.getMonth() + 1) + '/' + d.getDate() + '(' + DAY[d.getDay()] + ') ' + hh(bkState.slot.hour),   /* Sandbox 바 표시용 "10/21(수) 14:00" */
           customPreset: {
             timeRange: [Number(tFrom.value), Number(tTo.value)], limitAmount: Number(limitInput.value),
             categories: Array.prototype.map.call(bk.querySelectorAll('.chip-toggle[aria-checked="true"]'), function (c) { return c.getAttribute('data-cat'); })

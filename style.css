@@ -179,6 +179,14 @@ th { font-weight: inherit; text-align: left; }
 .btn--destructive { background: var(--danger); color: var(--text-on-danger); }
 .btn--destructive:hover { background: var(--danger-hover); }
 
+/* SecondaryDark — 어두운 바 위 보조 버튼 (Sandbox [체험 나가기]) */
+.btn--secondary-dark {
+  background: var(--neutral-inverted);
+  color: var(--text-primary-dark);
+  box-shadow: inset 0 0 0 1px var(--border-inverted);
+}
+.btn--secondary-dark:hover { background: var(--neutral-ink); }
+
 .btn--block { width: 100%; }
 
 /* Disabled: 불투명도 50% */

@@ -52,7 +52,13 @@ window.KonaMock = (function () {
     ]
   };
 
-  var POCKET_NAME = { meal: '식대P', fitness: '체력단련P', welfare: '복지P', expense: '법인경비P' };
+  /* 07 Sandbox — 사이드바 계정은 예시 문구 (숫자가 예시라 고객의 실제 회사명과 섞이지 않게) */
+  var sandbox = {
+    admin: { name: '체험 관리자', meta: '예시 회사 · 관리자' },
+    employee: { name: '김민준 님', meta: '예시 회사 · 개발팀' }
+  };
+
+  var POCKET_NAME ={ meal: '식대P', fitness: '체력단련P', welfare: '복지P', expense: '법인경비P' };
 
   /* 남은 잔액 = 시작 잔액 − 승인 결제 (차단은 차감 없음) */
   function balances(start, payments) {
@@ -61,5 +67,5 @@ window.KonaMock = (function () {
     return b;
   }
 
-  return { company: company, admin: admin, employee: employee, POCKET_NAME: POCKET_NAME, balances: balances };
+  return { company: company, admin: admin, employee: employee, sandbox: sandbox, POCKET_NAME: POCKET_NAME, balances: balances };
 })();

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>가상 체험 대시보드 — 코나비즈</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="sandbox.css">
+</head>
+<body>
+  <div class="sandbox">
+    <h1 class="visually-hidden">코나비즈 가상 체험 대시보드 (예시 데이터)</h1>
+
+    <!-- ===================== sandbox-bar (64, 상단 고정 · 모바일 2줄) ===================== -->
+    <header class="sandbox-bar">
+      <div class="sandbox-bar__left">
+        <span class="badge-sandbox">SANDBOX</span>
+        <div class="seg-toggle" role="tablist" aria-label="체험 화면">
+          <button id="tab-admin" class="seg-toggle__tab" type="button" role="tab" aria-selected="true" aria-controls="panel-admin" data-view-tab="admin">관리자 대시보드<span class="seg-toggle__more"> 미리보기</span></button>
+          <button id="tab-employee" class="seg-toggle__tab" type="button" role="tab" aria-selected="false" aria-controls="panel-employee" tabindex="-1" data-view-tab="employee">임직원 마이페이지<span class="seg-toggle__more"> 미리보기</span></button>
+        </div>
+      </div>
+      <div class="sandbox-bar__right">
+        <p class="sandbox-bar__booking" data-booking hidden></p>
+        <a class="btn btn--secondary-dark sandbox-bar__exit" href="index.html">체험 나가기</a>
+      </div>
+    </header>
+
+    <!-- ===================== 본문: admin.html · employee.html 그대로 (?sandbox=1) ===================== -->
+    <div class="sandbox-body">
+      <div id="panel-admin" class="sandbox-panel is-active" role="tabpanel" aria-labelledby="tab-admin">
+        <iframe class="sandbox-frame" src="admin.html?sandbox=1" title="관리자 대시보드 미리보기 (예시 데이터)"></iframe>
+      </div>
+      <div id="panel-employee" class="sandbox-panel" role="tabpanel" aria-labelledby="tab-employee" inert>
+        <iframe class="sandbox-frame" src="employee.html?sandbox=1" title="임직원 마이페이지 미리보기 (예시 데이터)"></iframe>
+      </div>
+    </div>
+
+    <p class="visually-hidden" role="status" data-sandbox-live></p>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/sandbox.js"></script>
+</body>
+</html>

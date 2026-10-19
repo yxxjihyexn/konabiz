@@ -1,5 +1,10 @@
 @AGENTS.md
 
+## 작업 방식
+
+- 답변과 진행 상황 설명은 항상 한국어로
+- "구조를 먼저 보여줘"라고 하면 확인 질문만 하지 말고 구조 내용을 채팅에 직접 적어서 보여주기
+
 ## Figma 기준
 
 - 파일: `tElrjs8WxtQnBpTQllNOAs` (코나비즈)
@@ -21,3 +26,12 @@
   - employee.html: `suspended` · `issuing` · `no-payments` · `loading` · `error`
 - 모바일 법인카드는 기획서 6.11대로 비율 400:252 유지 (Figma 모바일 프레임은 335×252)
 - 대시보드 하단 2열(카테고리 · 결제 알림)은 1024 미만부터 세로로 쌓음
+- Sandbox(sandbox.html): sandbox-bar 아래에 `admin.html?sandbox=1` · `employee.html?sandbox=1`을 iframe 2개로 겹쳐 띄우고 토글로 전환(Dissolve 200ms). 본문 마크업은 복사하지 않음
+  - 탭은 주소에 남김: `?view=employee`, 그 밖은 관리자. `history.replaceState`라 방문 기록에 쌓지 않음
+  - `?sandbox=1` 동작은 `js/sandbox-mode.js`(app.js보다 먼저 로드): 계정 예시 문구(`KonaMock.sandbox`), 로그아웃 제거, 임직원관리 비활성 + 꼬리표 "체험 불가", 드로어·챗봇 FAB·`#` 링크 외 클릭은 토스트 Info
+  - 예약 정보는 `kona.reservation`의 `preferredLabel`(`10/21(수) 14:00`)로 만들고, 저장값이 없으면 숨김
+  - 1024 미만은 탭 이름에서 "미리보기"를 뺌(바 한 줄에 맞추려고)
+
+## 작업 방식
+- 답변과 진행 상황 설명은 항상 한국어로
+- "구조를 먼저 보여줘"라고 하면 확인 질문만 하지 말고 구조 내용을 채팅에 직접 적어서 보여주기
