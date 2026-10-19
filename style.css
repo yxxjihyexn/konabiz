@@ -244,7 +244,6 @@ th { font-weight: inherit; text-align: left; }
 .badge-best {
   display: inline-flex;
   align-items: center;
-  margin-left: 8px;
   padding: 2px 8px;
   border-radius: var(--radius-full);
   background: var(--cyan-500);
@@ -252,7 +251,6 @@ th { font-weight: inherit; text-align: left; }
   font-size: 12px;
   line-height: 18px;
   font-weight: 600;
-  vertical-align: middle;
 }
 
 /* 로고 */
