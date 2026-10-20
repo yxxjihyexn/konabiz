@@ -94,6 +94,39 @@
 .card-list--solution { flex-wrap: wrap; }
 .card-list--solution > .feature-card { flex: 1 1 400px; }   /* Min 400 → 1200 안에서 2열 */
 
+/* ---------- 4-1. AI 기능 (Hero 다음) ----------
+   카드는 feature-card 그대로. 예시 영역은 Canvas 배경 + "예시" 캡션 — 클릭 대상 아님 */
+.ai-head { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ai-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--text-secondary-light);
+}
+
+.card-list--ai { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ai-card__labels { display: flex; align-items: center; gap: 8px; }
+
+.ai-example {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  background: var(--neutral-canvas);
+  border-radius: var(--radius-8);
+}
+.ai-example__label { font-size: 12px; line-height: 18px; font-weight: 600; color: var(--text-secondary-light); }
+.ai-predict { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ai-predict__arrow { color: var(--text-secondary-light); }
+.ai-predict__score { font-size: 14px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 근거 한 줄은 카드 맨 아래 — 두 카드 높이가 같아도 줄이 나란히 */
+.ai-card__basis { margin-top: auto; font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
 /* ---------- 5. 시뮬레이터 배너 ---------- */
 .banner {
   display: flex;
@@ -444,6 +477,9 @@
   .header__menu { display: inline-flex; }
 
   .banner { padding: 40px; }
+
+  /* AI 기능 — 세로로 쌓음 */
+  .card-list--ai { grid-template-columns: minmax(0, 1fr); }
 
   /* 시뮬레이터: 1000 모달이 들어가지 않는 폭 — 규칙 열을 위로 올리고 결제·지갑 2열 */
   .sim-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

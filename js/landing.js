@@ -944,4 +944,13 @@
       pwToggle.setAttribute('aria-label', '비밀번호 보기');
     });
   }
+
+  /* =======================================================
+     AI 기능 섹션 — 질문 칩: 챗봇을 열고 그 질문을 직접 입력과 같은 경로로 보냄
+     (답변을 기다리는 중이면 KonaChat.ask가 보내지 않음 → 중복 전송 없음)
+     ======================================================= */
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-chat-ask]');
+    if (chip && window.KonaChat) window.KonaChat.ask(chip.textContent);
+  });
 })();

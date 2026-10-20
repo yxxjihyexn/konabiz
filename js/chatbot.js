@@ -57,7 +57,10 @@ window.KonaChat = (function () {
   panel.innerHTML =
     '<header class="chat-header">' +
       '<div class="chat-header__text">' +
-        '<h2 id="chat-title" class="chat-header__title">코나비즈 도우미</h2>' +
+        '<div class="chat-header__row">' +
+          '<h2 id="chat-title" class="chat-header__title">코나비즈 도우미</h2>' +
+          '<span class="badge-status badge-status--ai">AI</span>' +
+        '</div>' +
         '<p class="chat-header__desc">AI가 답변해요 · 정확한 안내는 상담에서 도와드려요</p>' +
       '</div>' +
       '<button class="icon-btn" type="button" aria-label="새 대화 시작" title="새 대화 시작" data-chat-new>' +
@@ -358,6 +361,16 @@ window.KonaChat = (function () {
     if (!mobile.matches) input.focus({ preventScroll: true });
   }
 
+  /* ---------- 바깥에서 질문 보내기 (랜딩 AI 섹션 칩) ----------
+     직접 입력과 같은 경로(quickReplyId 없음). 답변을 기다리는 중·오프라인·모달 위에서는 보내지 않음(send가 막음) */
+  function ask(text) {
+    open();
+    if (panel.hidden) return false;
+    var before = state.messages.length;
+    send(String(text || ''));
+    return state.messages.length > before;
+  }
+
   /* ---------- [상담 예약하기] · [무료로 체험하기] ----------
      랜딩: 그 모달을 바로 (opener = FAB → 포커스 복귀 · 유입 경로 "chatbot")
      다른 페이지: index.html?action=booking|simulator로 이동 (Sandbox iframe은 바깥 창) */
@@ -446,5 +459,5 @@ window.KonaChat = (function () {
   fitInput();
   if (chatParam) open();
 
-  return { open: open, close: close, clear: clear };
+  return { open: open, close: close, clear: clear, ask: ask };
 })();
