@@ -1,7 +1,7 @@
 /* =========================================================
    코나비즈 — landing.js
    02 결제 시뮬레이터 · 03 상담예약 · 04 로그인 모달 동작
-   ※ 백엔드(FastAPI) 연결 전 프로토타입: 결제 판단·예약·로그인을 브라우저에서 흉내냄
+   ※ 결제 판단·예약은 아직 브라우저에서 흉내냄. 로그인은 FastAPI(/api/auth/login)
    ========================================================= */
 (function () {
   'use strict';
@@ -655,6 +655,9 @@
     var roleGroup = lg.querySelector('[data-login-role]');
     var helpEl = lg.querySelector('[data-login-help]');
     var alertEl = lg.querySelector('[data-login-alert]');
+    var alertTitle = alertEl.querySelector('.alert-box__title');
+    var alertMsg = alertTitle.nextElementSibling;
+    var ALERT_DEFAULT = alertMsg.textContent;
     var emailField = lg.querySelector('[data-field="email"]');
     var pwField = lg.querySelector('[data-field="password"]');
     var emailInput = emailField.querySelector('input');
@@ -668,12 +671,9 @@
       admin: '비밀번호를 모르시나요? 코나비즈 고객센터로 문의해주세요',
       employee: '비밀번호를 모르시나요? 회사 담당자에게 문의해주세요'
     };
-    /* TODO(백엔드): FastAPI 로그인(JWT) 연결 전 시연용 예시 계정 — 연결하면 이 목록과 판단 로직을 지울 것 */
-    var DEMO_ACCOUNTS = [
-      { email: 'admin@ganada.co.kr', password: 'kona-demo-1234', role: 'admin' },
-      { email: 'employee@ganada.co.kr', password: 'kona-demo-1234', role: 'employee' }
-    ];
-    var NEXT_PAGE = { admin: 'admin.html', employee: 'employee.html' };
+    var SUBMIT_LABEL = submitBtn.textContent;
+    var MSG_NETWORK = '일시적인 오류로 로그인하지 못했습니다. 잠시 후 다시 시도해주세요.';
+    var MSG_EXPIRED = '로그인이 만료되었습니다. 다시 로그인해주세요.';
 
     var fieldError = function (field, msg) {
       field.classList.toggle('is-error', !!msg);
@@ -684,6 +684,12 @@
       fieldError(emailField, '');
       fieldError(pwField, '');
       alertEl.hidden = true;
+    };
+    /* 경고 박스 — 실패는 제목 + 서버 메시지, 만료 안내는 제목 없이 문구만 */
+    var showAlert = function (msg, noTitle) {
+      alertTitle.hidden = !!noTitle;
+      alertMsg.textContent = msg || ALERT_DEFAULT;
+      alertEl.hidden = false;
     };
 
     roleGroup.addEventListener('click', function (e) {
@@ -707,7 +713,8 @@
     });
 
     var setBusy = function (busy) {
-      submitBtn.classList.toggle('is-loading', busy);
+      submitBtn.disabled = busy;
+      submitBtn.textContent = busy ? '로그인 중…' : SUBMIT_LABEL;
       emailInput.disabled = busy;
       pwInput.disabled = busy;
       pwToggle.disabled = busy;
@@ -725,22 +732,48 @@
       fieldError(pwField, pwMsg);
       if (emailMsg || pwMsg) { (emailMsg ? emailInput : pwInput).focus(); return; }
 
+      /* 탭(role)은 보내지 않음 — 서버가 실제 역할의 화면(redirect)을 알려줌 */
       setBusy(true);
-      setTimeout(function () {
-        setBusy(false);
-        var ok = DEMO_ACCOUNTS.some(function (a) { return a.email === email.toLowerCase() && a.password === pw && a.role === role; });
-        if (ok) {
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email: email, password: pw })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; });
+      }).then(function (r) {
+        if (r.res.ok && r.data.redirect) {
           /* 비로그인 챗봇 대화는 계정에 합치지 않고 새 대화로 (공용 PC 대비) */
           if (window.KonaChat) window.KonaChat.clear(false);
-          window.location.href = NEXT_PAGE[role];
+          window.location.href = r.data.redirect;
           return;
         }
-        /* 실패: 입력칸은 Error로 바꾸지 않고 경고 박스 하나. 역할 불일치·미등록도 같은 문구 */
-        alertEl.hidden = false;
-        pwInput.value = '';
-        pwInput.focus();
-      }, 800);
+        /* 401(이메일·비밀번호) · 403(이용 중지)은 서버 문구, 그 밖은 일시적 오류 */
+        var known = (r.res.status === 401 || r.res.status === 403) && typeof r.data.detail === 'string';
+        fail(known ? r.data.detail : MSG_NETWORK);
+      }).catch(function () {
+        fail(MSG_NETWORK);
+      });
     });
+
+    /* 실패: 입력칸은 Error로 바꾸지 않고 경고 박스 하나. 이메일은 두고 비밀번호만 비움 */
+    var fail = function (msg) {
+      setBusy(false);
+      showAlert(msg);
+      pwInput.value = '';
+      pwInput.focus();
+    };
+
+    /* ?login=1 — 보호 페이지에서 넘어왔을 때 바로 열기. &expired=1이면 만료 안내 (새로고침해도 다시 안 열리게 주소에서 뺌) */
+    var lgParams = new URLSearchParams(window.location.search);
+    if (lgParams.get('login') === '1') {
+      var lgUrl = new URL(window.location.href);
+      lgUrl.searchParams.delete('login');
+      lgUrl.searchParams.delete('expired');
+      history.replaceState(null, '', lgUrl);
+      Kona.openModal('modal-login', null);
+      if (lgParams.get('expired') === '1') showAlert(MSG_EXPIRED, true);
+    }
 
     lg.addEventListener('modal:close', function () {
       clearErrors();

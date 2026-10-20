@@ -1,7 +1,7 @@
 """데모 데이터 — js/mock-data.js(기획서 9.7)를 Python으로 옮겨 적은 것.
 
 mock-data.js를 고치면 여기도 같이 고친다. 숫자가 어긋나면 seed.py의 검사(assert)에서 멈춤.
-mock-data.js에 없는 것: 데모 로그인 이메일(js/landing.js DEMO_ACCOUNTS),
+mock-data.js에 없는 것: 데모 로그인 이메일·비밀번호(README의 데모 계정),
 예약 3건(03 예약 화면의 "마감" 칸과 맞춤), 챗봇 대화 1건(구조 확인용 예시).
 """
 
@@ -14,6 +14,10 @@ ADMIN = {"name": "김철수", "email": "admin@ganada.co.kr", "created": (2026, 6
 # 김민준만 데모 로그인 이메일로 바꿈 (mock은 minjun.kim@company.co.kr)
 DEMO_EMPLOYEE_NAME = "김민준"
 DEMO_EMPLOYEE_EMAIL = "employee@ganada.co.kr"
+
+# 데모 로그인 비밀번호 (발표 시연용, 두 계정 같음) — DB에는 해시만 들어감
+# 나머지 23명은 비밀번호 없음 = 로그인 불가 (5단계 초대에서 임시 비밀번호 발급)
+DEMO_PASSWORD = "kona-demo-1234"
 
 MEMBERS = [
     ("윤채원", "chaewon.yoon@company.co.kr", "마케팅팀", "9143", "invited", (2026, 10, 11)),

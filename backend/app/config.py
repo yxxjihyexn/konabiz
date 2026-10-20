@@ -14,6 +14,9 @@ class Settings:
     MONGODB_URI: str = os.getenv("MONGODB_URI", "")
     MONGODB_DB: str = os.getenv("MONGODB_DB", "konabiz")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "")
+    JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES") or 480)   # 8시간
+    # 로컬(http)에서는 꺼 둠 — 배포(https)에서 true
+    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").strip().lower() in ("1", "true", "yes")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 

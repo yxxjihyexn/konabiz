@@ -4,10 +4,12 @@
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app import db
-from app.routers import health
+from app.routers import auth, health
 from app.static_site import router as static_router
 
 
@@ -26,9 +28,18 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# API 라우터 — 다음 단계: auth, reservations, users, chat을 여기에 추가
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    # 기본 422 응답은 보낸 값(input)을 그대로 돌려줌 — 비밀번호가 섞일 수 있어 위치·종류만
+    errors = [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
+
+
+# API 라우터 — 다음 단계: reservations, users, chat을 여기에 추가
 API_ROUTERS = [
     health.router,
+    auth.router,
 ]
 for api_router in API_ROUTERS:
     app.include_router(api_router, prefix="/api")

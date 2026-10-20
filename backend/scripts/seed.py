@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
+from app.auth import hash_password
 from app.config import settings
 from scripts import seed_data as D
 
@@ -49,17 +50,21 @@ def build_users():
         "_id": ObjectId(), "email": D.ADMIN["email"], "name": D.ADMIN["name"], "role": "admin",
         "company": D.COMPANY, "dept": None, "status": "active",
         "invited_at": None, "created_at": kst(*D.ADMIN["created"][1:], year=D.ADMIN["created"][0]),
+        "password_hash": hash_password(D.DEMO_PASSWORD),
     }
     employees = []
     for name, email, dept, _last4, status, (y, m, d) in D.MEMBERS:
         if name == D.DEMO_EMPLOYEE_NAME:
             email = D.DEMO_EMPLOYEE_EMAIL
         invited_at = kst(m, d, year=y)
-        employees.append({
+        user = {
             "_id": ObjectId(), "email": email.lower(), "name": name, "role": "employee",
             "company": D.COMPANY, "dept": dept, "status": status,
             "invited_at": invited_at, "created_at": invited_at,
-        })
+        }
+        if name == D.DEMO_EMPLOYEE_NAME:
+            user["password_hash"] = hash_password(D.DEMO_PASSWORD)   # 데모 계정만
+        employees.append(user)
     return admin, employees
 
 
@@ -140,6 +145,8 @@ def check(users, cards):
     demo = next(c for c in cards if c["transactions"])
     got = {k: v["balance"] for k, v in demo["points"].items()}
     assert got == D.DEMO_BALANCES, f"김민준 잔액 불일치: {got}"
+    with_pw = sorted(u["email"] for u in users if u.get("password_hash"))
+    assert with_pw == sorted([D.ADMIN["email"], D.DEMO_EMPLOYEE_EMAIL]), "비밀번호는 데모 계정 2개에만"
 
 
 def main():
@@ -185,6 +192,8 @@ def main():
         print(f"{'컬렉션':<14}문서 수")
         for name in COLLECTIONS:
             print(f"{name:<16}{db[name].count_documents({})}")
+        print()
+        print(f"로그인 가능(데모) 계정:{db.users.count_documents({'password_hash': {'$exists': True}})}개")
     finally:
         client.close()
 
