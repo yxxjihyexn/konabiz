@@ -4,6 +4,7 @@
 - 몇 번을 실행해도 결과가 같음 (4개 컬렉션을 지우고 인덱스까지 다시 만듦)
 - 이 4개 외의 컬렉션·DB는 건드리지 않음
 - 날짜는 KST 기준 값을 UTC datetime으로 저장 (날짜만 있는 값은 KST 00:00)
+- 예약 3건만 실행일 기준 (다음 평일들). 다른 데이터는 고정 날짜
 """
 import sys
 from datetime import datetime, timedelta, timezone
@@ -13,6 +14,7 @@ from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
 from app.auth import hash_password
 from app.config import settings
+from app.reservation_rules import next_weekdays, slot_at, slot_error
 from scripts import seed_data as D
 
 COLLECTIONS = ("users", "reservations", "cards", "chats")
@@ -102,18 +104,22 @@ def build_cards(user_ids_by_email):
     return cards
 
 
-def build_reservations():
+def build_reservations(now):
+    """seed 실행일 기준 — 다음 평일들의 시간 (언제 시연해도 예약 화면 범위 안에 마감 칸이 보이게)."""
+    days = next_weekdays(now, max(r["slot"][0] for r in D.RESERVATIONS))
     docs = []
     for r in D.RESERVATIONS:
-        m, d, h = r["slot"]
-        cm, cd, ch, cmin = r["created"]
+        nth, h = r["slot"]
+        at = slot_at(days[nth - 1], h).astimezone(timezone.utc)
+        assert slot_error(at, now) is None, "seed 예약 시간이 예약 가능 범위 밖"
         docs.append({
             "company_name": r["company_name"], "employee_count": r["employee_count"], "card_count": r["card_count"],
             "contact_name": r["contact_name"], "contact_title": r["contact_title"],
             "phone": r["phone"], "email": r["email"],
             "consultation_type": r["consultation_type"], "address": r["address"],
-            "preferred_at": kst(m, d, h), "custom_preset": r["custom_preset"],
-            "source": r["source"], "status": "confirmed", "created_at": kst(cm, cd, ch, cmin),
+            "preferred_at": at, "custom_preset": r["custom_preset"],
+            "source": r["source"], "status": "confirmed",
+            "created_at": (now - timedelta(hours=r["created"])).replace(second=0, microsecond=0),
         })
     return docs
 
@@ -174,7 +180,7 @@ def main():
         ids = {u["email"]: u["_id"] for u in employees}
         cards = build_cards(ids)
         check(users, cards)
-        reservations = build_reservations()
+        reservations = build_reservations(datetime.now(timezone.utc))
         chats = build_chats(ids[D.DEMO_EMPLOYEE_EMAIL])
 
         # 2) 4개 컬렉션만 지우고 인덱스 다시 만들기

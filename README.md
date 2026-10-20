@@ -47,3 +47,38 @@ python -m scripts.seed
 - 페이지 보호: `admin.html`·`admin-members.html`은 관리자, `employee.html`은 임직원만 열립니다. 로그인하지 않았으면 `index.html?login=1`(로그인 모달), 만료됐으면 만료 안내까지, 다른 역할이면 자기 화면으로 보냅니다. `sandbox.html`과 `?sandbox=1`이 붙은 `admin.html`·`employee.html`은 로그인 없이 열립니다.
 - API: `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me`. 다른 라우터에서는 `app.auth`의 `require_login` · `require_admin` 의존성을 씁니다.
 - 로그인은 8000 서버에서만 동작합니다 (5500 정적 서버에는 API가 없음).
+
+### 상담 예약 API
+
+03 상담예약 모달이 쓰는 API. 로그인 없이 씁니다 (예약자는 아직 계정이 없는 잠재 고객). 예약 내용은 `reservations` 컬렉션에 저장하고, 브라우저의 `kona.reservation`(Sandbox 상단 바 표시용)에도 그대로 남깁니다.
+
+**예약 가능 시간 규칙** — `backend/app/reservation_rules.py`와 `js/landing.js`가 같은 규칙을 씀 (한쪽을 고치면 같이 고침)
+- 오늘(KST)이 속한 주의 월요일부터 2주, 월~금, 10·11·14·15·16·17시 (1시간)
+- 지난 시간은 예약할 수 없음 (화면에서도 마감 칸과 같은 Disabled). 이번 주 남은 칸이 없으면 다음 주를 먼저 보여줌
+- 시간은 KST로 계산하고 DB에는 UTC로 저장
+
+| API | 설명 |
+|---|---|
+| `GET /api/reservations/slots?from=YYYY-MM-DD&to=YYYY-MM-DD` | 기간(KST, 양끝 포함, 31일 이내) 안의 **확정 예약 시각만** — `{"closed": ["2026-10-21T11:00:00+09:00", …]}`. 예약자 정보는 넣지 않음 |
+| `POST /api/reservations` | 예약 저장. 성공 201 `{id, preferred_at, consultation_type}` |
+
+`POST` 본문 (JSON):
+
+```json
+{
+  "company_name": "코나비즈(주)", "employee_count": "100", "card_count": "30",
+  "contact_name": "홍길동", "contact_title": "", "phone": "010-1234-5678", "email": "",
+  "consultation_type": "phone", "address": "",
+  "preferred_at": "2026-10-23T14:00:00+09:00",
+  "custom_preset": {"time_range": [9, 20], "limit_amount": 50000, "categories": ["restaurant", "office"]},
+  "source": "hero"
+}
+```
+
+- 서버에서 프론트와 같은 규칙으로 다시 검사: 회사명·담당자명 필수, 임직원·카드 수는 1~1,000,000 정수(쉼표 허용), 휴대폰 번호 형식, 이메일은 입력했을 때만 형식 검사, 직책·이메일은 빈 값 허용, `consultation_type`은 `phone` | `inperson`(대면이면 주소 필수), `source`는 `hero` · `closing-cta` · `chatbot` · `simulator` · `landing`, 선택 조건은 시간 0~24 · 한도 0~100,000(10,000 단위) · 업종 7종 중에서
+- 검사 실패 422: `{"detail": "입력값을 확인해주세요.", "errors": {"phone": "연락 가능한 휴대폰 번호를 입력해주세요."}}` — 항목별 한국어 문구만, 입력값은 돌려주지 않음. 시간 오류는 `preferred_at` ("이미 지난 시간이에요…" · "예약할 수 없는 시간이에요…")
+- 이미 확정된 시간 409: "방금 다른 예약이 확정된 시간이에요. 다른 시간을 골라주세요." — 먼저 조회하지 않고 DB 고유 인덱스(`preferred_at`, `status: "confirmed"`일 때만)의 중복 오류로 판단하므로 동시에 들어와도 하나만 저장됨
+- 저장 값: 전화번호는 `010-1234-5678` 모양, 인원·카드 수는 숫자, 전화 상담이면 `address: null`, `status: "confirmed"`, `created_at`
+- seed의 예약 3건은 **seed 실행일 다음 평일들**(첫째 날 11:00·15:00, 둘째 날 10:00)로 들어가서 언제 시연해도 마감 칸이 보입니다. 시간이 지나 마감 칸이 지난 시간이 되면 seed를 다시 실행하세요. 테스트로 만든 예약도 seed를 다시 실행하면 지워집니다.
+- `?sandbox=1`이 붙은 화면에서는 예약 API를 부르지 않습니다 (마감 칸 없이 브라우저에만 저장).
+- 규칙·검사 테스트 (DB 없이, `backend` 폴더에서): `python -m unittest discover -s tests -t . -v`

@@ -16,7 +16,10 @@
 
 - 포커스 표시: `outline: 2px solid #0E7490; outline-offset: 2px` (기획서의 Cyan200 글로우 링 대체 — 대비 기준 때문). 토큰은 `style.css`의 `--focus-outline` · `--focus-offset`
 - 테두리: `border` 대신 `box-shadow: inset`으로 그림 (Figma Stroke Inside처럼 크기에 영향 없게). 장식·그룹핑 `inset 0 0 0 0.5px`, 인터랙티브 `inset 0 0 0 1px`, 한쪽 선 `inset 0 ±0.5px 0`
-- 상담예약 예시 주: 10/19~10/23 (마감 수 11:00·15:00, 목 10:00), 10/26~10/30 (마감 없음) — `js/landing.js`
+- 상담예약 날짜: 오늘(KST)이 속한 주의 월요일부터 2주(월~금, 10·11·14·15·16·17시). 규칙은 `js/landing.js`와 `backend/app/reservation_rules.py`가 같게 유지. 마감 칸 = DB 확정 예약(`/api/reservations/slots`) + 지난 시간(같은 Disabled). seed 예약 3건은 실행일 다음 평일(첫째 11:00·15:00, 둘째 10:00)
+  - 상담 방식 값은 `phone` · `inperson` (프론트·서버·DB 모두 같음, 변환 없음)
+  - 예약 확정 버튼 요청 중은 로그인과 같은 "비활성 + 예약 중…". 실패 안내는 Step2의 `alert-box` (`[data-booking-alert]` · 시간 불러오기 실패 `[data-slot-error]` + [다시 시도])
+  - landing.js는 IIFE 하나에 `var`라 03·04 사이에 함수 이름이 겹치면 덮어씀 (예: 로그인 `setBusy` / 예약 `setBooking`)
 - 로그인은 서버 연결 전까지 `js/landing.js`의 `DEMO_ACCOUNTS` 예시 계정 사용
 - 점선 테두리(카드 발급 중 자리)만 예외로 `border: 1px dashed` 사용 — 그림자로는 점선을 그릴 수 없음
 - 앱 화면(admin.html · employee.html): 사이드바 마크업은 HTML 한 곳에만 두고, 1024 미만 드로어는 `js/app.js`가 복사함. 선택된 메뉴는 `aria-current="page"`, 준비 중 메뉴는 링크가 아닌 `<span aria-disabled="true">`

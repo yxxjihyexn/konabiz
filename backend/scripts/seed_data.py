@@ -2,7 +2,7 @@
 
 mock-data.js를 고치면 여기도 같이 고친다. 숫자가 어긋나면 seed.py의 검사(assert)에서 멈춤.
 mock-data.js에 없는 것: 데모 로그인 이메일·비밀번호(README의 데모 계정),
-예약 3건(03 예약 화면의 "마감" 칸과 맞춤), 챗봇 대화 1건(구조 확인용 예시).
+예약 3건(seed 실행일 다음 평일들 — 03 예약 화면의 "마감" 칸), 챗봇 대화 1건(구조 확인용 예시).
 """
 
 COMPANY = "가나다테크(주)"
@@ -65,35 +65,36 @@ DEMO_PAYMENTS = [
 # mock-data.js 주석의 남은 잔액 — seed에서 계산값과 비교
 DEMO_BALANCES = {"meal": 120000, "fitness": 70000, "welfare": 82000, "expense": 488000}
 
-# 상담예약 — 03 예약 화면의 예시 마감 칸 (수 10/21 11:00·15:00, 목 10/22 10:00)
-# (월, 일, 시)는 KST. contact_title·email은 폼에서 선택 항목이라 빈 값 허용
+# 상담예약 — 03 예약 화면의 예시 마감 칸. 언제 시연해도 보이도록 seed 실행일 기준으로 계산:
+# "slot": (몇 번째 다음 평일, 시 KST) — 첫째 다음 평일 11:00·15:00, 둘째 다음 평일 10:00
+# "created": seed 실행 시각에서 몇 시간 전. contact_title·email은 폼에서 선택 항목이라 빈 값 허용
 RESERVATIONS = [
     {
-        "slot": (10, 21, 11),
+        "slot": (1, 11),
         "company_name": "하늘물산(주)", "employee_count": 120, "card_count": 40,
         "contact_name": "이지은", "contact_title": "인사팀장",
         "phone": "010-2345-6789", "email": "jieun.lee@haneul.co.kr",
         "consultation_type": "phone", "address": None,
         "custom_preset": {"time_range": [9, 20], "limit_amount": 50000, "categories": ["restaurant", "fitness", "office"]},
-        "source": "hero", "created": (10, 17, 10, 24),
+        "source": "hero", "created": 72,
     },
     {
-        "slot": (10, 21, 15),
+        "slot": (1, 15),
         "company_name": "바다소프트", "employee_count": 45, "card_count": 15,
         "contact_name": "박준영", "contact_title": "",
         "phone": "010-3456-7890", "email": "",
-        "consultation_type": "visit", "address": "서울특별시 강남구 테헤란로 123, 4층",
+        "consultation_type": "inperson", "address": "서울특별시 강남구 테헤란로 123, 4층",
         "custom_preset": {"time_range": [8, 22], "limit_amount": 30000, "categories": ["restaurant", "cafe"]},
-        "source": "closing-cta", "created": (10, 18, 14, 5),
+        "source": "closing-cta", "created": 48,
     },
     {
-        "slot": (10, 22, 10),
+        "slot": (2, 10),
         "company_name": "산들푸드(주)", "employee_count": 300, "card_count": 100,
         "contact_name": "최수빈", "contact_title": "총무팀 과장",
         "phone": "010-4567-8901", "email": "subin.choi@sandeul.co.kr",
         "consultation_type": "phone", "address": None,
         "custom_preset": {"time_range": [9, 20], "limit_amount": 50000, "categories": ["restaurant", "fitness", "office", "travel"]},
-        "source": "chatbot", "created": (10, 19, 9, 41),
+        "source": "chatbot", "created": 20,
     },
 ]
 

@@ -1,7 +1,7 @@
 /* =========================================================
    코나비즈 — landing.js
    02 결제 시뮬레이터 · 03 상담예약 · 04 로그인 모달 동작
-   ※ 결제 판단·예약은 아직 브라우저에서 흉내냄. 로그인은 FastAPI(/api/auth/login)
+   ※ 결제 판단은 아직 브라우저에서 흉내냄. 로그인·예약은 FastAPI(/api/auth/login · /api/reservations)
    ========================================================= */
 (function () {
   'use strict';
@@ -277,7 +277,8 @@
     var bkTop = bk.querySelector('[data-booking-top]');
     var panel = bk.querySelector('.modal__panel');
     var views = bk.querySelectorAll('[data-view]');
-    var bkState = { view: '1', method: null, slot: null, week: 0, minWeek: 0, activeDay: null };
+    var bkState = { view: '1', method: null, slot: null, week: 0, minWeek: 0, activeDay: null,
+      monday: 0, closed: [], slots: 'idle', req: 0, busy: false };   /* slots: idle | loading | ready | error */
 
     var showView = function (v) {
       bkState.view = v;
@@ -309,11 +310,15 @@
     };
     bkForm.addEventListener('input', markDirty);
 
-    /* ---------- 1/2 검사 ---------- */
+    /* ---------- 1/2 검사 (서버 backend/app/routers/reservations.py도 같은 규칙) ---------- */
+    var isCount = function (v) {   /* 쉼표 허용, 1 ~ 1,000,000 */
+      var n = v.replace(/,/g, '');
+      return /^\d{1,7}$/.test(n) && Number(n) > 0 && Number(n) <= 1000000;
+    };
     var RULES = {
       company: function (v) { return v ? '' : '회사명을 입력해주세요.'; },
-      employees: function (v) { return /^\d+$/.test(v.replace(/,/g, '')) && Number(v.replace(/,/g, '')) > 0 ? '' : '임직원 수를 숫자로 입력해주세요.'; },
-      cards: function (v) { return /^\d+$/.test(v.replace(/,/g, '')) && Number(v.replace(/,/g, '')) > 0 ? '' : '필요한 카드 수를 숫자로 입력해주세요.'; },
+      employees: function (v) { return isCount(v) ? '' : '임직원 수를 숫자로 입력해주세요.'; },
+      cards: function (v) { return isCount(v) ? '' : '필요한 카드 수를 숫자로 입력해주세요.'; },
       name: function (v) { return v ? '' : '담당자 이름을 입력해주세요.'; },
       phone: function (v) { return /^01[016789]-?\d{3,4}-?\d{4}$/.test(v.replace(/\s/g, '')) ? '' : '연락 가능한 휴대폰 번호를 입력해주세요.'; },
       email: function (v) { return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? '' : '이메일 형식을 확인해주세요.'; }
@@ -348,7 +353,8 @@
         return;
       }
       showView('2');
-      renderWeek();
+      showBookAlert('');
+      loadSlots(true);
       bk.querySelector('[data-method-group] [role="radio"]:not([tabindex="-1"])').focus();
     });
 
@@ -411,9 +417,14 @@
     };
 
     /* ---------- 2/2 상담 방법 · 상담 일시 ---------- */
+    /* 예약 가능 규칙 — backend/app/reservation_rules.py와 같게 맞춤 (한쪽을 고치면 같이 고침)
+       오늘(KST)이 속한 주의 월요일부터 2주 · 월~금 · HOURS · 지난 시간은 예약 불가 */
     var HOURS = [10, 11, 14, 15, 16, 17];   /* 점심 12~13시 + 이동 버퍼 → 14시부터 재개 */
     var DAY = ['일', '월', '화', '수', '목', '금', '토'];
-    var MAX_WEEK = 1;   /* 프로토타입: 예시 주 두 주 (10/19~10/23 · 10/26~10/30) */
+    var MAX_WEEK = 1;   /* 이번 주 + 다음 주 */
+    var KST_MS = 9 * 3600000;
+    var SANDBOX = new URLSearchParams(window.location.search).get('sandbox') === '1';   /* Sandbox에서는 예약 API를 부르지 않음 */
+    var MSG_BOOK_FAIL = '일시적인 오류로 예약하지 못했어요. 잠시 후 다시 시도해주세요.';
     var methodGroup = bk.querySelector('[data-method-group]');
     var addressField = bk.querySelector('[data-field="address"]');
     var addressInput = addressField.querySelector('input');
@@ -423,32 +434,50 @@
     var nextWeek = bk.querySelector('[data-week="1"]');
     var slotDays = bk.querySelector('[data-slot-days]');
     var slotGrid = bk.querySelector('[data-slot-grid]');
+    var slotError = bk.querySelector('[data-slot-error]');
+    var slotRetry = bk.querySelector('[data-slot-retry]');
+    var bookAlert = bk.querySelector('[data-booking-alert]');
+    var bookAlertMsg = bk.querySelector('[data-booking-alert-msg]');
     var summary = bk.querySelector('[data-booking-summary]');
+    var prevBtn = bk.querySelector('[data-booking-prev]');
     var confirmBtn = bk.querySelector('[data-booking-confirm]');
+    var CONFIRM_LABEL = confirmBtn.textContent;
 
+    /* 날짜는 KST 날짜를 UTC 자정 Date로 다룸 → getUTC*로 읽음 (브라우저 시간대와 상관없이 같은 칸) */
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    var ymd = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
-    var mdLabel = function (d) { return (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; };
+    var ymd = function (d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
+    var mdLabel = function (d) { return (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일'; };
+    var dow = function (d) { return DAY[d.getUTCDay()]; };
 
-    /* 예시 예약 주: 2026-10-19(월)부터 두 주 고정. TODO(백엔드): 실제 예약 가능 주·마감 정보로 교체 */
-    var firstMonday = function () { return new Date(2026, 9, 19); };
-    var weekDays = function (offset) {
-      var mon = firstMonday();
-      mon.setDate(mon.getDate() + offset * 7);
-      return [0, 1, 2, 3, 4].map(function (i) { var d = new Date(mon); d.setDate(mon.getDate() + i); return d; });
+    var firstMonday = function () {
+      var k = new Date(Date.now() + KST_MS);
+      var mon = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()));
+      mon.setUTCDate(mon.getUTCDate() - (mon.getUTCDay() + 6) % 7);
+      return mon;
     };
-    /* 예시 마감: 수 10/21 11:00 · 15:00, 목 10/22 10:00 (둘째 주는 마감 없음) */
-    var CLOSED = ['2026-10-21 11', '2026-10-21 15', '2026-10-22 10'];
-    var isClosed = function (d, h) { return CLOSED.indexOf(ymd(d) + ' ' + h) > -1; };
+    var weekDays = function (offset) {
+      var mon = new Date(bkState.monday);
+      mon.setUTCDate(mon.getUTCDate() + offset * 7);
+      return [0, 1, 2, 3, 4].map(function (i) { var d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i); return d; });
+    };
+    var slotTime = function (d, h) { return d.getTime() + h * 3600000 - KST_MS; };   /* KST 날짜 + 시 → 시각(ms) */
+    /* 마감 = DB의 확정 예약 칸 + 이미 지난 칸 (같은 Disabled 모양) */
+    var isClosed = function (d, h) { return bkState.closed.indexOf(ymd(d) + ' ' + h) > -1 || slotTime(d, h) <= Date.now(); };
     var weekHasOpen = function (offset) {
       return weekDays(offset).some(function (d) { return HOURS.some(function (h) { return !isClosed(d, h); }); });
     };
 
     var renderWeek = function () {
       var days = weekDays(bkState.week);
+      var ready = bkState.slots === 'ready';
       weekRange.textContent = mdLabel(days[0]) + ' - ' + mdLabel(days[4]);
       prevWeek.disabled = bkState.week <= bkState.minWeek;
       nextWeek.disabled = bkState.week >= MAX_WEEK;
+      var failed = bkState.slots === 'error';
+      slotError.hidden = slotRetry.hidden = !failed;
+      slotDays.hidden = slotGrid.hidden = failed;   /* 실패하면 시간 칸 자리에 안내 + [다시 시도] */
+      slotGrid.setAttribute('aria-busy', String(bkState.slots === 'loading'));
+      if (failed) return;
 
       var active = bkState.activeDay && days.some(function (d) { return ymd(d) === bkState.activeDay; })
         ? bkState.activeDay
@@ -459,16 +488,17 @@
         var key = ymd(d), on = key === active;
         var picked = bkState.slot && bkState.slot.day === key;
         return '<button class="slot-day' + (picked ? ' has-pick' : '') + '" type="button" role="tab" id="bk-day-' + i + '" aria-controls="bk-col-' + i + '" aria-selected="' + on + '"' + (on ? '' : ' tabindex="-1"') + ' data-day="' + key + '">' +
-          DAY[d.getDay()] + '<strong>' + (d.getMonth() + 1) + '/' + d.getDate() + '</strong></button>';
+          dow(d) + '<strong>' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + '</strong></button>';
       }).join('');
 
       slotGrid.innerHTML = days.map(function (d, i) {
         var key = ymd(d);
-        var head = DAY[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
+        var head = dow(d) + ' ' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
         var slots = HOURS.map(function (h) {
+          if (!ready) return '<span class="segment__option slot skeleton" aria-hidden="true"></span>';   /* 불러오는 중 */
           var closed = isClosed(d, h);
           var picked = bkState.slot && bkState.slot.day === key && bkState.slot.hour === h;
-          var label = mdLabel(d) + '(' + DAY[d.getDay()] + ') ' + hh(h) + (closed ? ' 마감' : '');
+          var label = mdLabel(d) + '(' + dow(d) + ') ' + hh(h) + (closed ? ' 마감' : '');
           return '<button class="segment__option slot" type="button" aria-pressed="' + !!picked + '" aria-label="' + label + '"' +
             (closed ? ' disabled' : '') + ' data-day="' + key + '" data-hour="' + h + '">' + hh(h) + '</button>';
         }).join('');
@@ -477,30 +507,92 @@
       }).join('');
     };
 
+    /* 이번 주 남은 칸이 없으면(모두 마감 · 지남) 가장 빠른 예약 가능 주로 이동 (announce: 안내 문구) */
+    var pickFirstWeek = function (announce) {
+      bkState.minWeek = 0;
+      while (bkState.minWeek < MAX_WEEK && !weekHasOpen(bkState.minWeek)) bkState.minWeek++;
+      bkState.week = Math.max(bkState.week, bkState.minWeek);
+      if (announce && bkState.minWeek > 0) {
+        weekNotice.textContent = '이번 주는 예약 가능한 시간이 없어 가장 빠른 주를 보여드려요';
+        weekNotice.hidden = false;
+      }
+    };
+
+    /* 마감 시간 불러오기 — Step2에 들어올 때마다 · [다시 시도] · 409 뒤 */
+    var loadSlots = function (announce) {
+      var req = ++bkState.req;   /* 늦게 온 이전 응답은 버림 */
+      bkState.monday = firstMonday().getTime();
+      bkState.slots = 'loading';
+      renderWeek();
+      updateSummary();
+      var done = function (closed) {
+        if (req !== bkState.req) return;
+        bkState.closed = closed;
+        bkState.slots = 'ready';
+        /* 고른 칸이 그사이 마감·지남·범위 밖이 되면 선택 해제 */
+        if (bkState.slot) {
+          var d = new Date(bkState.slot.date);
+          var inRange = weekDays(0).concat(weekDays(MAX_WEEK)).some(function (x) { return ymd(x) === bkState.slot.day; });
+          if (!inRange || isClosed(d, bkState.slot.hour)) bkState.slot = null;
+        }
+        pickFirstWeek(announce);
+        renderWeek();
+        updateSummary();
+      };
+      if (SANDBOX) { done([]); return; }
+      var range = weekDays(0).concat(weekDays(MAX_WEEK));
+      fetch('/api/reservations/slots?from=' + ymd(range[0]) + '&to=' + ymd(range[range.length - 1]), { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error(String(res.status));
+          return res.json();
+        })
+        .then(function (data) {
+          /* "2026-10-21T11:00:00+09:00" → "2026-10-21 11" */
+          done((data.closed || []).map(function (s) { return s.slice(0, 10) + ' ' + Number(s.slice(11, 13)); }));
+        })
+        .catch(function () {
+          if (req !== bkState.req) return;
+          bkState.slots = 'error';
+          renderWeek();
+          updateSummary();
+        });
+    };
+    slotRetry.addEventListener('click', function () { loadSlots(true); });
+
     var updateSummary = function () {
       var methodText = bkState.method === 'phone' ? '전화 상담' : bkState.method === 'inperson' ? '대면 방문' : '';
       var ready = bkState.method && bkState.slot && (bkState.method !== 'inperson' || addressInput.value.trim());
       if (bkState.method && bkState.slot) {
         var d = new Date(bkState.slot.date);
-        summary.textContent = mdLabel(d) + '(' + DAY[d.getDay()] + ') ' + hh(bkState.slot.hour) + ' · ' + methodText;
+        summary.textContent = mdLabel(d) + '(' + dow(d) + ') ' + hh(bkState.slot.hour) + ' · ' + methodText;
         summary.classList.remove('is-empty');
       } else {
         summary.textContent = '상담 방법과 시간을 골라주세요';
         summary.classList.add('is-empty');
       }
-      confirmBtn.disabled = !ready;
+      /* 시간 목록을 불러오는 중 · 실패 · 예약 요청 중에도 비활성 */
+      confirmBtn.disabled = !ready || bkState.slots !== 'ready' || bkState.busy;
       markDirty();
+    };
+
+    var showBookAlert = function (msg) {
+      bookAlertMsg.textContent = msg || '';
+      bookAlert.hidden = !msg;
+      if (msg) bookAlert.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     };
 
     methodGroup.addEventListener('click', function (e) {
       var b = e.target.closest('[data-method]');
-      if (!b) return;
+      if (!b || bkState.busy) return;
       Kona.selectItem(methodGroup, b);
       bkState.method = b.getAttribute('data-method');
       addressField.hidden = bkState.method !== 'inperson';   /* 대면이면 주소 칸이 바로 나타남, 포커스는 이동하지 않음 */
       updateSummary();
     });
-    addressInput.addEventListener('input', updateSummary);
+    addressInput.addEventListener('input', function () {
+      if (addressField.classList.contains('is-error')) setError(addressField, '');
+      updateSummary();
+    });
 
     bk.querySelectorAll('[data-week]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -521,22 +613,23 @@
     });
 
     slotGrid.addEventListener('click', function (e) {
-      var b = e.target.closest('.slot');
-      if (!b || b.disabled) return;
+      var b = e.target.closest('button.slot');
+      if (!b || b.disabled || bkState.busy) return;
       var day = b.getAttribute('data-day'), hour = Number(b.getAttribute('data-hour'));
       var date = weekDays(bkState.week).filter(function (d) { return ymd(d) === day; })[0];
       bkState.slot = { day: day, hour: hour, date: date.getTime() };   /* 하나만 선택, 주를 바꿔도 유지 */
       slotGrid.querySelectorAll('.slot').forEach(function (s) { s.setAttribute('aria-pressed', String(s === b)); });
       slotDays.querySelectorAll('.slot-day').forEach(function (s) { s.classList.toggle('has-pick', s.getAttribute('data-day') === day); });
+      showBookAlert('');   /* 다른 시간을 고르면 이전 실패 안내는 지움 */
       updateSummary();
     });
 
-    bk.querySelector('[data-booking-prev]').addEventListener('click', function () {
+    prevBtn.addEventListener('click', function () {
       showView('1');   /* 입력값 유지 */
       bk.querySelector('#bk-company').focus();
     });
 
-    /* ---------- 예약 확정 → 완료 ---------- */
+    /* ---------- 예약 확정 → POST /api/reservations → 완료 ---------- */
     var maskPhone = function (v) {
       var n = v.replace(/\D/g, '');
       return n.slice(0, 3) + '-****-' + n.slice(-4);
@@ -544,43 +637,115 @@
     var esc = function (s) {
       return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
     };
+    var get = function (id) { return bk.querySelector('#' + id).value.trim(); };
+    var currentPreset = function () {
+      return {
+        timeRange: [Number(tFrom.value), Number(tTo.value)], limitAmount: Number(limitInput.value),
+        categories: Array.prototype.map.call(bk.querySelectorAll('.chip-toggle[aria-checked="true"]'), function (c) { return c.getAttribute('data-cat'); })
+      };
+    };
+
+    var requestBody = function () {
+      var p = currentPreset();
+      var d = new Date(bkState.slot.date);
+      return {
+        company_name: get('bk-company'), employee_count: get('bk-employees'), card_count: get('bk-cards'),
+        contact_name: get('bk-name'), contact_title: get('bk-position'), phone: get('bk-phone'), email: get('bk-email'),
+        consultation_type: bkState.method, address: bkState.method === 'inperson' ? addressInput.value.trim() : '',
+        preferred_at: ymd(d) + 'T' + pad(bkState.slot.hour) + ':00:00+09:00',
+        custom_preset: { time_range: p.timeRange, limit_amount: p.limitAmount, categories: p.categories },
+        source: bkState.source
+      };
+    };
+
+    var setBooking = function (busy) {   /* 04 로그인 버튼과 같은 방식: 비활성 + 문구 (setBusy는 로그인에서 씀) */
+      bkState.busy = busy;
+      confirmBtn.textContent = busy ? '예약 중…' : CONFIRM_LABEL;
+      prevBtn.disabled = busy;
+      updateSummary();
+    };
+
+    /* 422 — Step1 항목이면 Step1로 돌아가 해당 칸, 주소는 그 칸, 시간은 안내 + 목록 다시 불러오기 */
+    var STEP1_FIELD = { company_name: 'company', employee_count: 'employees', card_count: 'cards', contact_name: 'name', contact_title: 'position', phone: 'phone', email: 'email' };
+    var showServerErrors = function (errors) {
+      var step1 = Object.keys(STEP1_FIELD).filter(function (k) { return errors[k]; });
+      if (step1.length) {
+        showView('1');
+        step1.forEach(function (k) { setError(bk.querySelector('[data-view="1"] [data-field="' + STEP1_FIELD[k] + '"]'), errors[k]); });
+        var first = bk.querySelector('[data-view="1"] .field.is-error');
+        first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        first.querySelector('.field__input').focus({ preventScroll: true });
+        return;
+      }
+      if (errors.address) {
+        setError(addressField, errors.address);
+        addressInput.focus();
+        return;
+      }
+      if (errors.preferred_at) {
+        bkState.slot = null;
+        showBookAlert(errors.preferred_at);
+        loadSlots(false);
+        return;
+      }
+      showBookAlert(errors.consultation_type || MSG_BOOK_FAIL);
+    };
+
+    var finishBooking = function () {
+      var d = new Date(bkState.slot.date);
+      var when = mdLabel(d) + '(' + dow(d) + ') ' + hh(bkState.slot.hour);
+      var rows = [
+        ['상담 일시', when],
+        ['상담 방식', bkState.method === 'phone' ? '전화 상담' : '대면 방문'],
+        bkState.method === 'phone' ? ['연락처', maskPhone(get('bk-phone'))] : ['방문 주소', addressInput.value.trim()],
+        ['담당자', '김민준 · 010-9876-4321']   /* 예시 담당자 */
+      ];
+      bk.querySelector('[data-done-info]').innerHTML = rows.map(function (r) {
+        return '<li class="info-row"><span class="info-row__label">' + r[0] + '</span><span class="info-row__value">' + esc(r[1]) + '</span></li>';
+      }).join('');
+
+      store.set('kona.reservation', {
+        companyName: get('bk-company'), employeeCount: get('bk-employees'), cardCount: get('bk-cards'),
+        contactName: get('bk-name'), contactTitle: get('bk-position'), phone: get('bk-phone'), email: get('bk-email'),
+        consultationType: bkState.method, address: addressInput.value.trim(),
+        preferredDate: bkState.slot.day, preferredTime: hh(bkState.slot.hour),
+        preferredLabel: (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + '(' + dow(d) + ') ' + hh(bkState.slot.hour),   /* Sandbox 바 표시용 "10/21(수) 14:00" */
+        customPreset: currentPreset(),
+        source: bkState.source, createdAt: new Date().toISOString()
+      });
+
+      showView('done');
+      bk.removeAttribute('data-dirty');
+      bk.querySelector('#booking-done-title').focus();
+    };
 
     confirmBtn.addEventListener('click', function () {
-      if (confirmBtn.disabled) return;
-      confirmBtn.classList.add('is-loading');
-      /* TODO(백엔드): 서버에서 시간 재검증 후 MongoDB reservations에 저장 */
-      setTimeout(function () {
-        confirmBtn.classList.remove('is-loading');
-        var get = function (id) { return bk.querySelector('#' + id).value.trim(); };
-        var d = new Date(bkState.slot.date);
-        var when = mdLabel(d) + '(' + DAY[d.getDay()] + ') ' + hh(bkState.slot.hour);
-        var rows = [
-          ['상담 일시', when],
-          ['상담 방식', bkState.method === 'phone' ? '전화 상담' : '대면 방문'],
-          bkState.method === 'phone' ? ['연락처', maskPhone(get('bk-phone'))] : ['방문 주소', addressInput.value.trim()],
-          ['담당자', '김민준 · 010-9876-4321']   /* 예시 담당자 */
-        ];
-        bk.querySelector('[data-done-info]').innerHTML = rows.map(function (r) {
-          return '<li class="info-row"><span class="info-row__label">' + r[0] + '</span><span class="info-row__value">' + esc(r[1]) + '</span></li>';
-        }).join('');
-
-        store.set('kona.reservation', {
-          companyName: get('bk-company'), employeeCount: get('bk-employees'), cardCount: get('bk-cards'),
-          contactName: get('bk-name'), contactTitle: get('bk-position'), phone: get('bk-phone'), email: get('bk-email'),
-          consultationType: bkState.method, address: addressInput.value.trim(),
-          preferredDate: bkState.slot.day, preferredTime: hh(bkState.slot.hour),
-          preferredLabel: (d.getMonth() + 1) + '/' + d.getDate() + '(' + DAY[d.getDay()] + ') ' + hh(bkState.slot.hour),   /* Sandbox 바 표시용 "10/21(수) 14:00" */
-          customPreset: {
-            timeRange: [Number(tFrom.value), Number(tTo.value)], limitAmount: Number(limitInput.value),
-            categories: Array.prototype.map.call(bk.querySelectorAll('.chip-toggle[aria-checked="true"]'), function (c) { return c.getAttribute('data-cat'); })
-          },
-          source: bkState.source, createdAt: new Date().toISOString()
-        });
-
-        showView('done');
-        bk.removeAttribute('data-dirty');
-        bk.querySelector('#booking-done-title').focus();
-      }, 800);
+      if (confirmBtn.disabled || bkState.busy) return;
+      showBookAlert('');
+      if (SANDBOX) { finishBooking(); return; }
+      setBooking(true);
+      fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(requestBody())
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; });
+      }).then(function (r) {
+        setBooking(false);
+        if (r.res.status === 201) { finishBooking(); return; }
+        if (r.res.status === 409) {   /* 방금 다른 예약이 확정된 시간 — Step2에 머묾, 시간만 해제하고 목록 새로고침 */
+          bkState.slot = null;
+          showBookAlert(typeof r.data.detail === 'string' ? r.data.detail : MSG_BOOK_FAIL);
+          loadSlots(false);
+          return;
+        }
+        if (r.res.status === 422 && r.data.errors) { showServerErrors(r.data.errors); return; }
+        showBookAlert(MSG_BOOK_FAIL);
+      }).catch(function () {
+        setBooking(false);
+        showBookAlert(MSG_BOOK_FAIL);
+      });
     });
 
     bk.querySelector('[data-done-later]').addEventListener('click', function () { Kona.closeModal('later'); });
@@ -597,6 +762,8 @@
       customToggle.setAttribute('aria-expanded', 'false');
       customBody.hidden = true;
       weekNotice.hidden = true;
+      showBookAlert('');
+      bkState.slots = 'idle';
       bk.removeAttribute('data-dirty');
       updateSummary();
       showView('1');
@@ -612,15 +779,8 @@
       if (bkState.view === '1' && !bk.hasAttribute('data-dirty')) {
         applyCustom(PRESETS[lastExperience ? lastExperience.preset : 3].custom);
       }
-      /* 이번 주 빈 시간이 없으면 가장 빠른 예약 가능 주로 이동 + 안내 */
-      bkState.minWeek = 0;
-      while (bkState.minWeek < MAX_WEEK && !weekHasOpen(bkState.minWeek)) bkState.minWeek++;
-      bkState.week = Math.max(bkState.week, bkState.minWeek);
-      if (bkState.minWeek > 0) {
-        weekNotice.textContent = '이번 주는 예약 가능한 시간이 없어 가장 빠른 주를 보여드려요';
-        weekNotice.hidden = false;
-      }
-      if (bkState.view === '2') renderWeek();
+      /* 일정 선택 단계에서 다시 열면 마감 시간을 새로 불러옴 */
+      if (bkState.view === '2') loadSlots(true);
     });
 
     bk.addEventListener('modal:close', function (e) {

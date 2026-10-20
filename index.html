@@ -420,7 +420,7 @@
             <legend class="form-section__title">기본정보</legend>
             <div class="field" data-field="company">
               <label class="field__label" for="bk-company">회사명</label>
-              <div class="field__control"><input id="bk-company" name="company" class="field__input" type="text" autocomplete="organization" placeholder="예: 코나비즈(주)" aria-describedby="bk-company-err"></div>
+              <div class="field__control"><input id="bk-company" maxlength="100" name="company" class="field__input" type="text" autocomplete="organization" placeholder="예: 코나비즈(주)" aria-describedby="bk-company-err"></div>
               <p id="bk-company-err" class="field__error"></p>
             </div>
             <div class="form-row">
@@ -438,12 +438,12 @@
             <div class="form-row">
               <div class="field" data-field="name">
                 <label class="field__label" for="bk-name">담당자명</label>
-                <div class="field__control"><input id="bk-name" name="name" class="field__input" type="text" autocomplete="name" placeholder="예: 홍길동" aria-describedby="bk-name-err"></div>
+                <div class="field__control"><input id="bk-name" maxlength="100" name="name" class="field__input" type="text" autocomplete="name" placeholder="예: 홍길동" aria-describedby="bk-name-err"></div>
                 <p id="bk-name-err" class="field__error"></p>
               </div>
               <div class="field" data-field="position">
                 <label class="field__label" for="bk-position">직책 (선택)</label>
-                <div class="field__control"><input id="bk-position" name="position" class="field__input" type="text" autocomplete="organization-title" placeholder="예: 인사팀장"></div>
+                <div class="field__control"><input id="bk-position" maxlength="100" name="position" class="field__input" type="text" autocomplete="organization-title" placeholder="예: 인사팀장"></div>
               </div>
             </div>
             <div class="field" data-field="phone">
@@ -453,7 +453,7 @@
             </div>
             <div class="field" data-field="email">
               <label class="field__label" for="bk-email">이메일 (선택)</label>
-              <div class="field__control"><input id="bk-email" name="email" class="field__input" type="email" autocomplete="email" placeholder="예: name@company.com" aria-describedby="bk-email-err"></div>
+              <div class="field__control"><input id="bk-email" maxlength="320" name="email" class="field__input" type="email" autocomplete="email" placeholder="예: name@company.com" aria-describedby="bk-email-err"></div>
               <p id="bk-email-err" class="field__error"></p>
             </div>
           </fieldset>
@@ -537,12 +537,21 @@
             </div>
             <div class="field address-field" data-field="address" hidden>
               <label class="field__label" for="bk-address">방문 주소</label>
-              <div class="field__control"><input id="bk-address" name="address" class="field__input" type="text" autocomplete="street-address" placeholder="예: 서울특별시 강남구 테헤란로 123, 4층"></div>
+              <div class="field__control"><input id="bk-address" maxlength="200" name="address" class="field__input" type="text" autocomplete="street-address" placeholder="예: 서울특별시 강남구 테헤란로 123, 4층" aria-describedby="bk-address-err"></div>
+              <p id="bk-address-err" class="field__error"></p>
             </div>
           </fieldset>
 
           <fieldset class="form-section form-section--tight">
             <legend class="form-section__title">상담 일시</legend>
+            <!-- 예약 확정 실패 (이미 확정된 시간 · 지난 시간 · 일시적 오류) -->
+            <div class="alert-box" role="alert" data-booking-alert hidden>
+              <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
+              <div class="alert-box__text">
+                <p class="alert-box__title">예약하지 못했어요</p>
+                <p data-booking-alert-msg></p>
+              </div>
+            </div>
             <div class="week-nav">
               <button class="btn btn--ghost" type="button" data-week="-1">이전 주</button>
               <p class="week-nav__range" aria-live="polite" data-week-range></p>
@@ -551,6 +560,15 @@
             <p class="form-guide booking-notice" data-week-notice hidden></p>
             <div class="slot-days" role="tablist" aria-label="날짜 선택" data-slot-days></div>
             <div class="slot-grid" data-slot-grid></div>
+            <!-- 예약 가능 시간 불러오기 실패 -->
+            <div class="alert-box" role="alert" data-slot-error hidden>
+              <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
+              <div class="alert-box__text">
+                <p class="alert-box__title">예약 가능한 시간을 불러오지 못했어요</p>
+                <p>잠시 후 다시 시도해주세요</p>
+              </div>
+            </div>
+            <button class="btn btn--secondary" type="button" data-slot-retry hidden>다시 시도</button>
             <ul class="slot-legend" aria-label="시간 칸 범례">
               <li><span class="slot-legend__swatch slot-legend__swatch--open"></span>예약 가능</li>
               <li><span class="slot-legend__swatch slot-legend__swatch--selected"></span>선택됨</li>
