@@ -539,6 +539,8 @@ th { font-weight: inherit; text-align: left; }
 }
 .info-row__label { color: var(--text-secondary-light); white-space: nowrap; }
 .info-row__value { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+/* 값 전체가 보여야 하는 목록 (08 초대·재발급 완료의 로그인 정보) — 긴 이메일은 아무 위치에서나 줄바꿈 */
+.info-list--wrap .info-row__value { min-width: 0; overflow-wrap: anywhere; user-select: text; }
 
 /* ---------- 6. 모달 ---------- */
 /* 패널 Card · r16 · Shadow/Modal / 오버레이 Inverted 60% */

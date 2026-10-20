@@ -743,11 +743,14 @@
 
   /* ---------- 완료 화면 (초대 · 재발급) ----------
      임시 비밀번호는 이 화면에만 — [확인]으로 닫으면 화면에서 지우고 다시 보여주지 않음 (서버도 해시만 저장)
-     바깥 클릭 · ESC로 안 닫힘(data-locked), 비밀번호 글자는 드래그로 선택 가능 */
+     바깥 클릭 · ESC로 안 닫힘(data-locked). 이메일 · 비밀번호는 전체 표시, 각각 드래그로 선택 가능
+     [로그인 정보 복사]는 이메일 + 임시 비밀번호를 정해진 형식(loginText)으로 한 번에 */
   var formView = $('[data-invite-view="form"]', inviteModal);
   var doneView = $('[data-invite-view="done"]', inviteModal);
   var invitePanel = $('.modal__panel', inviteModal);
   var tempPw = $('[data-temp-pw]', doneView);
+  var loginEmail = $('[data-login-email]', doneView);
+  var loginInfo = $('[data-login-info]', doneView);
   var copyBtn = $('[data-copy]', doneView);
   var copyFail = $('[data-copy-fail]', doneView);
   var copyLive = $('[data-copy-live]', doneView);
@@ -764,6 +767,7 @@
     inviteModal.toggleAttribute('data-locked', done);
     if (!done) {
       tempPw.textContent = '';
+      loginEmail.textContent = '';
       doneFor = null;
     }
   }
@@ -774,8 +778,9 @@
       ? m.name + '님을 초대했어요'
       : m.name + '님의 임시 비밀번호를 다시 발급했어요';
     $('[data-done-desc]', doneView).textContent = kind === 'invite'
-      ? m.email + ' · ' + subLine(m)
+      ? subLine(m)
       : '이전 임시 비밀번호는 더 이상 쓸 수 없어요.';
+    loginEmail.textContent = m.email;
     tempPw.textContent = password;
     clearTimeout(copyTimer);
     copyBtn.textContent = COPY_LABEL;
@@ -786,27 +791,30 @@
     requestAnimationFrame(function () { $('[data-done-title]', doneView).focus(); });
   }
 
-  /* 비밀번호 글자를 선택해 둠 — 복사가 막혔을 때 바로 Ctrl+C 할 수 있게 */
-  function selectTempPw() {
+  function loginText() {
+    return '[코나비즈] 로그인 정보\n이메일: ' + loginEmail.textContent + '\n임시 비밀번호: ' + tempPw.textContent;
+  }
+  /* 로그인 정보(이메일 · 비밀번호)를 선택해 둠 — 복사가 막혔을 때 바로 Ctrl+C 할 수 있게 */
+  function selectLoginInfo() {
     var range = document.createRange();
-    range.selectNodeContents(tempPw);
+    range.selectNodeContents(loginInfo);
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
   }
   function copyFailed() {
     copyFail.hidden = false;
-    selectTempPw();
+    selectLoginInfo();
   }
   copyBtn.addEventListener('click', function () {
-    var text = tempPw.textContent;
-    if (!text) return;
+    if (!tempPw.textContent) return;
+    var text = loginText();
     copyFail.hidden = true;
     if (!navigator.clipboard || !navigator.clipboard.writeText) { copyFailed(); return; }
     navigator.clipboard.writeText(text).then(function () {
       copyBtn.textContent = '복사했어요';
       copyLive.textContent = '';
-      setTimeout(function () { copyLive.textContent = '임시 비밀번호를 복사했어요'; }, 50);
+      setTimeout(function () { copyLive.textContent = '로그인 정보를 복사했어요'; }, 50);
       clearTimeout(copyTimer);
       copyTimer = setTimeout(function () { copyBtn.textContent = COPY_LABEL; }, 2000);
     }, copyFailed);

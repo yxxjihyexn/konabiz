@@ -168,7 +168,12 @@
             <p id="invite-done-desc" class="modal-header__desc" data-done-desc></p>
           </div>
         </div>
-        <ul class="info-list">
+        <!-- 로그인 정보 — 이메일은 말줄임 없이 전체 표시(info-list--wrap), 두 값 모두 드래그로 선택 가능 -->
+        <ul class="info-list info-list--wrap" data-login-info>
+          <li class="info-row">
+            <span class="info-row__label" id="login-email-label">이메일</span>
+            <span class="info-row__value" aria-labelledby="login-email-label" data-login-email></span>
+          </li>
           <li class="info-row">
             <span class="info-row__label" id="temp-pw-label">임시 비밀번호</span>
             <span class="info-row__value" aria-labelledby="temp-pw-label" data-temp-pw></span>
@@ -184,7 +189,7 @@
         <p class="modal-text" role="alert" data-copy-fail hidden>복사하지 못했어요. 직접 선택해서 복사해주세요</p>
         <p class="visually-hidden" aria-live="polite" data-copy-live></p>
         <div class="modal-actions">
-          <button class="btn btn--secondary" type="button" data-copy>복사</button>
+          <button class="btn btn--secondary" type="button" data-copy>로그인 정보 복사</button>
           <button class="btn btn--primary" type="button" data-done-close>확인</button>
         </div>
       </div>
