@@ -111,15 +111,15 @@
   <div class="row-menu-overlay" data-menu-overlay hidden></div>
   <div class="row-menu" id="row-menu" role="menu" aria-label="임직원 관리 메뉴" data-menu hidden></div>
 
-  <!-- ===================== 모달: 임직원 초대 (480) ===================== -->
+  <!-- ===================== 모달: 임직원 초대 (480) — 입력 화면 / 완료 화면(임시 비밀번호, 재발급도 같이 씀) ===================== -->
   <div id="modal-invite" class="modal modal--sm" hidden>
     <div class="modal__overlay" data-modal-close></div>
     <section class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="invite-title" aria-describedby="invite-desc">
-      <div class="modal__body modal__body--plain">
+      <div class="modal__body modal__body--plain" data-invite-view="form">
         <div class="modal-header">
           <div class="modal-header__text">
             <h2 id="invite-title" class="modal-header__title">임직원 초대</h2>
-            <p id="invite-desc" class="modal-header__desc">초대 메일과 함께 법인카드가 바로 발급돼요.</p>
+            <p id="invite-desc" class="modal-header__desc">초대하면 임시 비밀번호와 법인카드가 바로 발급돼요.</p>
           </div>
           <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
             <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
@@ -139,9 +139,18 @@
               <p id="invite-email-err" class="field__error"></p>
             </div>
             <div class="field" data-field="dept">
-              <label class="field__label" for="invite-dept">부서 (선택)</label>
-              <div class="field__control"><input id="invite-dept" name="dept" class="field__input" type="text" autocomplete="off" placeholder="예: 개발팀" list="invite-dept-list"></div>
+              <label class="field__label" for="invite-dept">부서</label>
+              <div class="field__control"><input id="invite-dept" name="dept" class="field__input" type="text" autocomplete="off" placeholder="예: 개발팀" list="invite-dept-list" aria-describedby="invite-dept-err"></div>
+              <p id="invite-dept-err" class="field__error"></p>
               <datalist id="invite-dept-list"></datalist>
+            </div>
+          </div>
+          <!-- 서버·네트워크 오류 (입력값은 그대로) -->
+          <div class="alert-box" role="alert" data-invite-alert hidden>
+            <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
+            <div class="alert-box__text">
+              <p class="alert-box__title">초대하지 못했어요</p>
+              <p>일시적인 오류예요. 잠시 후 다시 시도해주세요.</p>
             </div>
           </div>
           <div class="modal-actions">
@@ -149,6 +158,35 @@
             <button class="btn btn--primary" type="submit" data-invite-submit disabled>초대하고 카드 발급하기</button>
           </div>
         </form>
+      </div>
+
+      <!-- 완료: 임시 비밀번호는 이 화면에서만 보임. 바깥 클릭·ESC로 안 닫히고 [확인]으로만 닫힘 (data-locked) -->
+      <div class="modal__body modal__body--plain" data-invite-view="done" hidden>
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="invite-done-title" class="modal-header__title" tabindex="-1" data-autofocus data-done-title></h2>
+            <p id="invite-done-desc" class="modal-header__desc" data-done-desc></p>
+          </div>
+        </div>
+        <ul class="info-list">
+          <li class="info-row">
+            <span class="info-row__label" id="temp-pw-label">임시 비밀번호</span>
+            <span class="info-row__value" aria-labelledby="temp-pw-label" data-temp-pw></span>
+          </li>
+        </ul>
+        <div class="alert-box" id="invite-done-alert">
+          <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
+          <div class="alert-box__text">
+            <p class="alert-box__title">이 창을 닫으면 다시 볼 수 없어요</p>
+            <p>임직원에게 직접 전달해주세요. 잊어버리면 임시 비밀번호를 다시 발급할 수 있어요.</p>
+          </div>
+        </div>
+        <p class="modal-text" role="alert" data-copy-fail hidden>복사하지 못했어요. 직접 선택해서 복사해주세요</p>
+        <p class="visually-hidden" aria-live="polite" data-copy-live></p>
+        <div class="modal-actions">
+          <button class="btn btn--secondary" type="button" data-copy>복사</button>
+          <button class="btn btn--primary" type="button" data-done-close>확인</button>
+        </div>
       </div>
     </section>
   </div>
@@ -205,6 +243,29 @@
     </section>
   </div>
 
+  <!-- ===================== 모달: 카드 정지 해제 확인 (480) — 정지 확인 창과 같은 구성 ===================== -->
+  <div id="modal-resume" class="modal modal--sm" hidden>
+    <div class="modal__overlay" data-modal-close></div>
+    <section class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="resume-title" aria-describedby="resume-sub resume-desc">
+      <div class="modal__body modal__body--plain">
+        <div class="modal-header">
+          <div class="modal-header__text">
+            <h2 id="resume-title" class="modal-header__title" data-target-title></h2>
+            <p id="resume-sub" class="modal-header__desc" data-target-sub></p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="닫기" data-modal-close>
+            <img src="assets/icon-close-secondary.svg" alt="" width="20" height="20">
+          </button>
+        </div>
+        <p id="resume-desc" class="modal-text">해제하면 바로 다시 결제할 수 있어요.</p>
+        <div class="modal-actions">
+          <button class="btn btn--ghost" type="button" data-modal-close data-autofocus>취소</button>
+          <button class="btn btn--primary" type="button" data-resume-submit>정지 해제하기</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <!-- ===================== 모달: 카드 회수 확인 (480, 위험 작업) ===================== -->
   <div id="modal-revoke" class="modal modal--sm" hidden>
     <div class="modal__overlay" data-modal-close></div>
@@ -223,7 +284,7 @@
           <img class="alert-box__icon" src="assets/icon-alert-danger.svg" alt="" width="20" height="20">
           <div class="alert-box__text">
             <p class="alert-box__title">회수하면 되돌릴 수 없어요</p>
-            <p>카드가 바로 해지되어 결제가 막히고, 계정도 비활성화돼요. 다시 사용하려면 새로 초대해야 해요.</p>
+            <p>카드가 바로 해지되어 결제가 막히고, 계정도 비활성화돼요. 다시 사용하려면 다른 이메일로 새로 초대해야 해요.</p>
           </div>
         </div>
         <p class="modal-text">잠시만 사용을 막으려면 회수 대신 <strong>카드 정지</strong>를 이용해주세요.</p>

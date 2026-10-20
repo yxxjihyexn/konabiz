@@ -2,6 +2,8 @@
 
 회원가입·비밀번호 찾기는 없음 (관리자 계정은 계약 후 발급, 임직원은 관리자가 초대).
 """
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -38,9 +40,12 @@ def login(body: LoginIn, response: Response, db: Database = Depends(get_db)):
     if user.get("status") in auth.BLOCKED_STATUSES:
         raise HTTPException(status_code=403, detail=MSG_BLOCKED)
 
-    # 초대받은 임직원의 첫 로그인 → 사용 중
+    # 초대받은 임직원의 첫 로그인 → 사용 중, 카드도 발급 중 → 사용 중
     if user["role"] == "employee" and user.get("status") == "invited":
-        db.users.update_one({"_id": user["_id"], "status": "invited"}, {"$set": {"status": "active"}})
+        res = db.users.update_one({"_id": user["_id"], "status": "invited"}, {"$set": {"status": "active"}})
+        if res.modified_count:
+            db.cards.update_one({"user_id": user["_id"], "status": "issuing"},
+                                {"$set": {"status": "active", "updated_at": datetime.now(timezone.utc)}})
 
     auth.set_session_cookie(response, auth.create_token(user["_id"], user["role"]))
     # 모달에서 고른 탭과 상관없이 실제 역할의 화면으로

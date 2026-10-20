@@ -16,6 +16,7 @@
 
   /* ---------- 모달 ----------
      열기: [닫기]·[취소]·ESC로 닫힘, 오버레이 클릭은 입력값이 없을 때만 닫힘
+     data-locked가 붙은 동안은 ESC·오버레이·[data-modal-close]로 닫히지 않음 (스크립트의 closeModal로만)
      열리면 [data-autofocus] → 첫 입력칸 → 첫 버튼 순으로 포커스, Tab은 모달 안에서만 순환
      닫히면 모달을 연 버튼으로 포커스 복귀, 배경 스크롤 잠금 */
   var current = null;   /* { el, opener } */
@@ -91,13 +92,18 @@
     if (closeBtn && current.el.contains(closeBtn)) {
       var isOverlay = closeBtn.classList.contains('modal__overlay');
       if (isOverlay && current.el.hasAttribute('data-dirty') ) return;   /* 입력값이 있으면 오버레이로 안 닫힘 */
+      if (current.el.hasAttribute('data-locked')) return;   /* 잠긴 모달(임시 비밀번호 표시)은 정해진 버튼으로만 닫힘 */
       closeModal(isOverlay ? 'overlay' : 'button');
     }
   });
 
   document.addEventListener('keydown', function (e) {
     if (!current) return;
-    if (e.key === 'Escape') { e.preventDefault(); closeModal('escape'); return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (!current.el.hasAttribute('data-locked')) closeModal('escape');
+      return;
+    }
     if (e.key === 'Tab') {
       var list = focusables(current.el);
       if (!list.length) return;

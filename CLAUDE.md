@@ -27,10 +27,13 @@
 - 상태 화면은 `?state=`로 전환 (목록에 없는 값은 Default)
   - admin.html: `empty`
   - employee.html: `suspended` · `issuing` · `no-payments` · `loading` · `error`
-  - admin-members.html: `empty` (0명에서 시작, 초대하면 실제로 목록으로 바뀜)
-- 부서는 영업1팀·마케팅팀·개발팀 3개, 대시보드 카드 수는 members에서 계산 (`KonaMock.activeCards()` = 초대됨 + 사용 중, 지금 21 = 6 + 7 + 8). 9.7의 "활성 카드 24장"보다 이 규칙이 우선
-- 임직원관리(admin-members.html · `js/admin-members.js`): 필터·검색·페이지·초대·CSV·⋯ 메뉴·정지·정지 해제·회수는 상태 페이지 없이 실제 동작으로. 바뀐 값은 새로고침하면 처음으로 돌아감
-  - `?dept=개발팀` → 부서 필터(칩 줄 끝 "부서: 개발팀 ×" — Figma에 없어서 추가), `?action=invite|csv` → 모달 바로 열기(열고 나면 주소에서 뺌). 대시보드 빈 상태 버튼은 `?state=empty&action=…`
+  - admin-members.html: 없음 (5단계부터 DB 목록. 임직원 0명이면 빈 상태, 불러오는 중 skeleton · 실패 alert-box + [다시 시도])
+- 부서는 영업1팀·마케팅팀·개발팀 3개 (`backend/app/member_rules.py` DEPTS = `KonaMock.DEPTS`). 대시보드 "활성 카드 수"는 사용 중(active)만, 발급 중(issuing)은 단위 뒤 "18장 · 발급 중 3"(두 번째 `metric-card__unit`, 좁으면 다음 줄). 부서 줄 카드 수도 active만(5·5·8). 로그인 화면은 `/api/dashboard/summary`, Sandbox는 `KonaMock.activeCards()` · `issuingCards()`. 9.7의 "활성 카드 24장"보다 이 규칙이 우선
+- 임직원관리(admin-members.html · `js/admin-members.js`): 단건 초대·임시 비밀번호 재발급·정지·정지 해제·회수는 `/api/members`로 DB 저장. 목록은 회사 전체를 받고 필터·검색·페이지는 화면에서. CSV 일괄 등록만 예시 동작(저장 안 함, ⋯ 없음)
+  - ⋯ 메뉴는 상태 전이표대로: 초대됨 [임시 비밀번호 다시 발급], 사용 중 [카드 정지], 정지 [정지 해제] + 회수됨 외 모두 [카드 회수]. 정지·해제·회수 모두 확인 창(`modal-suspend` · `modal-resume` · `modal-revoke`) 후 실행, 요청 중 확인 버튼 "…중" + 그 행 ⋯ 비활성, 409는 토스트 후 목록 새로고침
+  - 초대 완료·재발급 화면은 `modal-invite` 안의 `[data-invite-view="done"]`. 임시 비밀번호는 여기서만, `data-locked`라 바깥 클릭·ESC로 안 닫히고 [확인]으로만 (common.js가 `data-locked` 모달은 ESC·오버레이·`data-modal-close`를 무시). [복사] 실패면 안내 + 비밀번호 글자 자동 선택
+  - 부서는 필수(자유 입력 + datalist, 목록 밖이면 "목록에서 부서를 골라주세요."). 이메일 중복은 회수된 직원이면 다른 문구(회수된 이메일은 재초대 불가)
+  - `?dept=개발팀` → 부서 필터(칩 줄 끝 "부서: 개발팀 ×" — Figma에 없어서 추가), `?action=invite|csv` → 모달 바로 열기(열고 나면 주소에서 뺌). 대시보드 빈 상태 버튼은 `?action=…`
   - CSV 업로드 화면은 디자인이 없어 예시 결과(`KonaMock.csvSample`, 24행 중 3행 오류)를 바로 보여줌. 행 검사는 열 때마다 다시 해서, 이미 등록된 이메일은 중복 오류가 됨(21명 추가 뒤 다시 열면 24행 모두 오류)
   - 모달 버튼 등급(6.9): [취소]는 Ghost, 초대·CSV 초대·카드 정지는 Primary, 카드 회수만 Destructive(이름이 정확히 같을 때만 활성). 순서는 보조 왼쪽 · 주 버튼 오른쪽(간격 12), 모바일 하단 시트는 세로로 쌓고 주 버튼 위(간격 8) — `.modal-actions`
   - Tablet(768–1023)은 표를 유지하되 초대일 칸을 숨김(본문 688부터 7칸이면 이메일 칸이 사라져서)

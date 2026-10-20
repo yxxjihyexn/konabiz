@@ -10,7 +10,7 @@ window.KonaMock = (function () {
 
   /* 05 관리자 대시보드
      사용액 8,420,000 = 부서별 합계 = 카테고리별 합계(법인경비P 포함)
-     활성 카드 수 · 부서별 카드 수는 members에서 계산 (activeCards) */
+     활성 카드 수 · 부서별 카드 수는 members에서 계산 (activeCards · issuingCards) — 로그인 화면은 DB 기준 */
   var admin = {
     user: { name: '김철수', meta: company + ' · 관리자' },
     period: '10월 1일 ~ 10월 16일 기준',
@@ -55,7 +55,7 @@ window.KonaMock = (function () {
 
   /* 08 임직원관리 — 총 24명, 초대일 최신순
      부서 3개: 영업1팀 8 · 마케팅팀 7 · 개발팀 9명 / 상태: 초대됨 3 · 사용 중 18 · 정지 2 · 회수됨 1
-     활성 카드(초대됨 + 사용 중) 21 = 영업1팀 6 + 마케팅팀 7 + 개발팀 8
+     활성 카드(사용 중) 18 = 영업1팀 5 + 마케팅팀 5 + 개발팀 8, 발급 중(초대됨) 3
      김민준(개발팀 · 4821)은 06 마이페이지 사용자와 같은 사람 */
   var DEPTS = ['영업1팀', '마케팅팀', '개발팀'];
   var today = '2026.10.16';   /* 기준 기간 마지막 날 — 새로 초대한 사람의 초대일 */
@@ -121,12 +121,12 @@ window.KonaMock = (function () {
     ].map(function (r, i) { return { row: i + 1, name: r[0], email: r[1], dept: r[2] }; })
   };
 
-  /* 활성 카드 = 초대됨 + 사용 중 (정지·회수는 결제 불가). dept를 주면 그 부서만 */
-  function activeCards(dept) {
-    return members.filter(function (m) {
-      return (m.status === 'invited' || m.status === 'active') && (!dept || m.dept === dept);
-    }).length;
+  /* 카드 수 — 활성 = 사용 중(active)만 18, 발급 중 = 초대됨 3 (/api/dashboard/summary와 같은 기준). dept를 주면 그 부서만 */
+  function countCards(status, dept) {
+    return members.filter(function (m) { return m.status === status && (!dept || m.dept === dept); }).length;
   }
+  function activeCards(dept) { return countCards('active', dept); }
+  function issuingCards(dept) { return countCards('invited', dept); }
 
   /* 07 Sandbox — 사이드바 계정은 예시 문구 (숫자가 예시라 고객의 실제 회사명과 섞이지 않게) */
   var sandbox = {
@@ -145,7 +145,7 @@ window.KonaMock = (function () {
 
   return {
     company: company, admin: admin, employee: employee, sandbox: sandbox,
-    DEPTS: DEPTS, today: today, members: members, csvSample: csvSample, activeCards: activeCards,
+    DEPTS: DEPTS, today: today, members: members, csvSample: csvSample, activeCards: activeCards, issuingCards: issuingCards,
     POCKET_NAME: POCKET_NAME, balances: balances
   };
 })();

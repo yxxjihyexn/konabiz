@@ -46,11 +46,8 @@ MEMBERS = [
     ("서유나", "yuna.seo@company.co.kr", "개발팀", "0873", "active", (2026, 6, 1)),
 ]
 
-# 회원 상태 → 카드 상태 (초대됨은 카드 발급 중)
-CARD_STATUS = {"invited": "issuing", "active": "active", "suspended": "suspended", "revoked": "revoked"}
-
-# 포인트 4종 시작 잔액 (mock employee.start — 모든 카드 같은 값)
-START_POINTS = {"meal": 150000, "fitness": 100000, "welfare": 100000, "expense": 500000}
+# 회원 상태 → 카드 상태, 포인트 4종 시작 잔액 — 초대 API와 같은 값 (app/member_rules.py)
+from app.member_rules import CARD_STATUS, START_POINTS  # noqa: E402
 
 # 김민준 최근 거래 — (월, 일), 가맹점, 포인트(차단은 None), 금액, 차단 사유
 DEMO_PAYMENTS = [

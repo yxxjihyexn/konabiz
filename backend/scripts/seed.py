@@ -141,13 +141,16 @@ def check(users, cards):
     """mock-data.js와 숫자가 맞는지 — 어긋나면 넣기 전에 멈춤."""
     employees = [u for u in users if u["role"] == "employee"]
     assert len(employees) == 24, "임직원은 24명이어야 함"
-    active = [c for c in cards if c["status"] in ("issuing", "active")]
+    # 활성 카드 = 사용 중(active)만, 발급 중(issuing)은 따로 — 05 대시보드 "18장 · 발급 중 3"
+    active = [c for c in cards if c["status"] == "active"]
+    issuing = [c for c in cards if c["status"] == "issuing"]
     by_dept = {}
     dept_of = {u["_id"]: u["dept"] for u in employees}
     for c in active:
         by_dept[dept_of[c["user_id"]]] = by_dept.get(dept_of[c["user_id"]], 0) + 1
-    assert len(active) == 21, f"활성 카드 21장이어야 함 (지금 {len(active)})"
-    assert by_dept == {"영업1팀": 6, "마케팅팀": 7, "개발팀": 8}, f"부서별 활성 카드 불일치: {by_dept}"
+    assert len(active) == 18, f"활성 카드 18장이어야 함 (지금 {len(active)})"
+    assert len(issuing) == 3, f"발급 중 카드 3장이어야 함 (지금 {len(issuing)})"
+    assert by_dept == {"영업1팀": 5, "마케팅팀": 5, "개발팀": 8}, f"부서별 활성 카드 불일치: {by_dept}"
     demo = next(c for c in cards if c["transactions"])
     got = {k: v["balance"] for k, v in demo["points"].items()}
     assert got == D.DEMO_BALANCES, f"김민준 잔액 불일치: {got}"
