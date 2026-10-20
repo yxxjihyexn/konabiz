@@ -121,6 +121,22 @@ python -m scripts.seed
 5. 다시 관리자로 → ⋯ 메뉴에서 정지(그 직원은 새로고침하면 로그인 모달, 로그인하면 이용 중지 안내) → 정지 해제 → 회수(이름 입력 확인, 되돌릴 수 없음)
 6. 시연이 끝나면 `python -m scripts.seed`로 데이터를 처음으로 되돌립니다.
 
+### 임직원 마이페이지 API
+
+06 임직원 마이페이지(`employee.html`)가 쓰는 API. **임직원 로그인 필요**(관리자 계정은 403, 비로그인 401). 본인은 쿠키 토큰의 user_id로만 찾고, 주소·파라미터로 다른 사람 id를 받지 않습니다.
+
+| API | 설명 |
+|---|---|
+| `GET /api/me/card` | 본인 카드 `{last4, status, holder, points: {meal·fitness·welfare·expense: {start, balance}}, summary: {remaining, expense}, transactions: [{paid_at, merchant, pocket, amount, status, blocked_reason}]}`. 카드가 없으면 404 |
+
+- `summary.remaining` = 식대·체력단련·복지 3종 잔액 합계. 법인경비P(`expense`)는 별도 예산이라 합계에 넣지 않고 따로 표시합니다.
+- 거래는 최신순, `paid_at`은 KST(`+09:00`) ISO 문자열. 차단 거래(`status: "blocked"`)는 잔액에서 빠지지 않습니다. 화면은 처음 5건, [더 보기]마다 10건씩.
+- 사용자 정보(이메일·비밀번호 해시 등)와 DB id는 응답에 넣지 않습니다.
+- 화면: 불러오는 중 skeleton, 실패(403·404·5xx·네트워크) "정보를 불러오지 못했어요" + [다시 시도], 거래 0건 빈 상태 안내. 401은 app.js가 로그인 모달로 보냅니다.
+- 새로 초대한 직원은 시작 잔액 그대로(사용 0원)·거래 0건으로 보입니다.
+- `?sandbox=1`과 `?state=` 미리보기(suspended·issuing·no-payments·loading·error)는 이 API를 부르지 않고 `js/mock-data.js`의 김민준 예시값으로 보여줍니다.
+- 결제·포인트 충전·이동·거래 생성 API는 없습니다(거래는 seed 데이터만).
+
 ### 테스트
 
 `backend` 폴더에서 (DB에 붙지 않음 — 임직원 관리 테스트는 메모리 DB `mongomock` 사용):
@@ -132,3 +148,4 @@ python -m unittest discover -s tests -t . -v
 
 - `test_reservations.py`: 예약 시간 규칙·입력 검사
 - `test_members.py`: 상태 전이 전체, 409(이미 바뀐 상태·중복 이메일·회수된 이메일), 404(다른 회사·관리자·없는 id), 임직원 계정 403, 임시 비밀번호 1회 노출·재발급 후 이전 비밀번호 실패, 첫 로그인 시 카드 사용 중, 대시보드 숫자
+- `test_me.py`: 본인 카드만 조회(새 직원에게 김민준 데이터 없음), 김민준 잔액·거래 7건(차단 1), 합계에서 법인경비P 제외, 최신순·KST, 거래 0건, 민감 정보 없음, 관리자 403, 비로그인 401, 카드 없음 404

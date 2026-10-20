@@ -1,5 +1,7 @@
 /* =========================================================
    코나비즈 — employee.js (06 임직원 마이페이지)
+   카드·포인트·결제내역은 /api/me/card (로그인한 본인 것만)
+   ?sandbox=1 · ?state= 미리보기는 API를 부르지 않고 예시 데이터(KonaMock, 김민준)로
    ?state= suspended · issuing · no-payments · loading · error
    ========================================================= */
 (function () {
@@ -8,26 +10,58 @@
   var D = KonaMock.employee;
   var A = KonaApp;
   var PAGE = 5;   /* 처음 5건, [더 보기]마다 10건씩 */
+  var sandbox = new URLSearchParams(window.location.search).get('sandbox') === '1';
 
   var cardArea = document.querySelector('[data-card-area]');
   var points = document.querySelector('[data-points]');
   var history = document.querySelector('[data-history]');
 
-  function render(state) {
+  /* 화면에 그리는 모양 { last4, holder, status, balances{4종}, total, expense, payments[{date, merchant, pocket, amount, blocked}] } */
+
+  /* 예시 데이터 → 화면 모양 (Sandbox · ?state= 미리보기) */
+  function mockCard(state) {
     var noPay = state === 'issuing' || state === 'no-payments';
     var payments = noPay ? [] : D.payments;
-    renderCard(state);
-    renderPoints(state, payments);
-    renderHistory(state, payments);
+    var b = KonaMock.balances(D.start, payments);
+    return {
+      last4: D.card.last4, holder: D.card.holder,
+      status: state === 'suspended' || state === 'issuing' ? state : 'active',
+      balances: b, total: b.meal + b.fitness + b.welfare, expense: b.expense,
+      payments: payments
+    };
+  }
+
+  /* /api/me/card 응답 → 화면 모양. 날짜는 KST ISO 문자열의 월/일 */
+  function fromApi(r) {
+    var bal = {};
+    Object.keys(r.points).forEach(function (k) { bal[k] = r.points[k].balance; });
+    return {
+      last4: r.last4, holder: r.holder, status: r.status,
+      balances: bal, total: r.summary.remaining, expense: r.summary.expense,
+      payments: r.transactions.map(function (t) {
+        return {
+          date: t.paid_at.slice(5, 10).replace('-', '/'), merchant: t.merchant, pocket: t.pocket, amount: t.amount,
+          blocked: t.status === 'blocked' ? (t.blocked_reason || '결제가 차단됐어요') : null
+        };
+      })
+    };
+  }
+
+  /* view: 'loading' | 'error' | 화면 모양. onRetry는 실패 화면의 [다시 시도] */
+  function render(view, onRetry) {
+    renderCard(view);
+    renderPoints(view, onRetry);
+    renderHistory(view, onRetry);
   }
 
   /* ---------- 법인카드 ---------- */
-  function renderCard(state) {
-    if (state === 'loading') {
+  function renderCard(view) {
+    if (view === 'loading') {
       cardArea.innerHTML = '<div class="skeleton skeleton--card" aria-hidden="true"></div>';
       return;
     }
-    if (state === 'issuing') {
+    if (view === 'error') { cardArea.innerHTML = ''; return; }
+    if (view.status === 'issuing') {
       cardArea.innerHTML =
         '<div class="corp-card corp-card--issuing">' +
           '<img src="assets/icon-card.svg" alt="" width="24" height="24">' +
@@ -36,7 +70,7 @@
         '</div>';
       return;
     }
-    var suspended = state === 'suspended';
+    var suspended = view.status === 'suspended';
     cardArea.innerHTML =
       '<div class="corp-card' + (suspended ? ' is-suspended' : '') + '">' +
         '<div class="corp-card__top"><p class="corp-card__name">코나비즈 법인카드</p>' +
@@ -44,8 +78,8 @@
                    : '<span class="badge-status badge-status--active">사용 중</span>') + '</div>' +
         '<div class="corp-card__bottom">' +
           '<p class="corp-card__number"><span aria-hidden="true">•••• •••• •••• </span>' +
-          '<span class="visually-hidden">카드 마지막 네 자리 </span>' + D.card.last4 + '</p>' +
-          '<p class="corp-card__holder">' + D.card.holder + '</p>' +
+          '<span class="visually-hidden">카드 마지막 네 자리 </span>' + A.esc(view.last4) + '</p>' +
+          '<p class="corp-card__holder">' + A.esc(view.holder) + '</p>' +
         '</div>' +
       '</div>' +
       (suspended
@@ -55,8 +89,8 @@
   }
 
   /* ---------- 이번 달 남은 포인트 (합계에서 법인경비P 제외) ---------- */
-  function renderPoints(state, payments) {
-    if (state === 'loading') {
+  function renderPoints(view, onRetry) {
+    if (view === 'loading') {
       points.className = 'skeleton skeleton--points';
       points.setAttribute('aria-hidden', 'true');
       points.innerHTML = '';
@@ -65,23 +99,22 @@
     points.className = 'panel';
     points.removeAttribute('aria-hidden');
     var head = '<div class="points-head"><h2 id="points-title" class="points-head__label">이번 달 남은 포인트</h2>';
-    if (state === 'error') {
+    if (view === 'error') {
       points.innerHTML = head + '</div>';
-      points.appendChild(A.loadError(function () { render('default'); }));
+      points.appendChild(A.loadError(onRetry));
       return;
     }
-    var b = KonaMock.balances(D.start, payments);
-    var total = b.meal + b.fitness + b.welfare;
+    var b = view.balances;
     var row = function (label, v) {
       return '<li class="info-row"><span class="info-row__label">' + label + '</span><span class="info-row__value">' + A.won(v) + '</span></li>';
     };
-    points.innerHTML = head + '<p class="points-head__total">' + A.won(total) + '</p></div>' +
+    points.innerHTML = head + '<p class="points-head__total">' + A.won(view.total) + '</p></div>' +
       '<ul class="info-list points-list">' + row('식대P', b.meal) + row('체력단련P', b.fitness) + row('복지P', b.welfare) + '</ul>' +
       '<div class="points-divider" aria-hidden="true"></div>' +
-      '<p class="info-row points-expense"><span class="info-row__label">법인경비P (별도 예산)</span><span class="info-row__value">' + A.won(b.expense) + '</span></p>';
+      '<p class="info-row points-expense"><span class="info-row__label">법인경비P (별도 예산)</span><span class="info-row__value">' + A.won(view.expense) + '</span></p>';
   }
 
-  /* ---------- 최근 결제내역 ---------- */
+  /* ---------- 최근 결제내역 (최신순) ---------- */
   function payRow(p) {
     var blocked = !!p.blocked;
     return '<li class="pay-row' + (blocked ? ' is-blocked' : '') + '">' +
@@ -92,19 +125,20 @@
       '<p class="pay-row__amount">' + A.won(p.amount) + '</p></li>';
   }
 
-  function renderHistory(state, payments) {
+  function renderHistory(view, onRetry) {
     var title = '<h2 id="history-title" class="panel__title">최근 결제내역</h2>';
-    if (state === 'loading') {
+    if (view === 'loading') {
       history.innerHTML = title + '<div class="skeleton skeleton--history" aria-hidden="true"></div>';
       history.setAttribute('aria-busy', 'true');
       return;
     }
     history.removeAttribute('aria-busy');
-    if (state === 'error') {
+    if (view === 'error') {
       history.innerHTML = title;
-      history.appendChild(A.loadError(function () { render('default'); }));
+      history.appendChild(A.loadError(onRetry));
       return;
     }
+    var payments = view.payments;
     if (!payments.length) {
       history.innerHTML = title +
         '<div class="empty-state"><div class="empty-state__text">' +
@@ -138,5 +172,25 @@
     });
   }
 
-  render(A.state(['suspended', 'issuing', 'no-payments', 'loading', 'error']));
+  /* ---------- 불러오기 ---------- */
+  function load() {
+    render('loading');
+    fetch('/api/me/card', { credentials: 'same-origin' }).then(function (res) {
+      if (res.status === 401) return null;   /* 로그인 모달로 보내는 것은 app.js(/api/auth/me) */
+      if (!res.ok) throw new Error(String(res.status));   /* 403 · 404(카드 없음) · 5xx */
+      return res.json();
+    }).then(function (r) {
+      if (r) render(fromApi(r));
+    }).catch(function () {
+      render('error', load);
+    });
+  }
+
+  var state = A.state(['suspended', 'issuing', 'no-payments', 'loading', 'error']);
+  if (sandbox || state !== 'default') {
+    var preview = function () { render(mockCard('default')); };
+    render(state === 'loading' || state === 'error' ? state : mockCard(state), preview);
+  } else {
+    load();
+  }
 })();

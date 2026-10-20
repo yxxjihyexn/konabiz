@@ -107,4 +107,7 @@ def static_file(path: str, request: Request):
     if name in PROTECTED_PAGES:
         # 로그아웃 뒤 뒤로 가기로 캐시된 화면이 보이지 않게
         res.headers["Cache-Control"] = "no-store"
+    else:
+        # 매번 서버에 확인 (안 바뀌었으면 304) — 고친 js·css가 옛 캐시로 보이지 않게
+        res.headers["Cache-Control"] = "no-cache"
     return res
