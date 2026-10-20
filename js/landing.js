@@ -794,15 +794,16 @@
     applyCustom(PRESETS[3].custom);
     updateSummary();
 
-    /* ?action=booking — 다른 화면 챗봇의 [상담 예약하기]에서 넘어왔을 때 바로 열기 (새로고침해도 다시 안 열리게 주소에서 뺌)
-       &source=chatbot이면 opener를 FAB로 → 유입 경로 "chatbot", 닫으면 FAB로 포커스 */
+    /* ?action=booking|simulator — 다른 화면 챗봇의 [상담 예약하기]·[무료로 체험하기]에서 넘어왔을 때 바로 열기
+       (새로고침해도 다시 안 열리게 주소에서 뺌). &source=chatbot이면 opener를 FAB로 → 유입 경로 "chatbot", 닫으면 FAB로 포커스 */
     var params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'booking') {
+    var action = params.get('action');
+    if (action === 'booking' || (action === 'simulator' && sim)) {
       var url = new URL(window.location.href);
       url.searchParams.delete('action');
       url.searchParams.delete('source');
       history.replaceState(null, '', url);
-      Kona.openModal('modal-booking', params.get('source') === 'chatbot' ? document.querySelector('.fab-chatbot') : null);
+      Kona.openModal('modal-' + action, params.get('source') === 'chatbot' ? document.querySelector('.fab-chatbot') : null);
     }
   }
 

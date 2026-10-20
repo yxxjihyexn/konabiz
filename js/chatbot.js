@@ -102,6 +102,8 @@ window.KonaChat = (function () {
   var fabIcon = fab.querySelector('img');
 
   /* ---------- 그리기 ---------- */
+  var CTA = { booking: '상담 예약하기', simulator: '무료로 체험하기' };   /* 답변 아래 버튼 */
+
   function botNode(m) {
     var wrap = document.createElement('div');
     wrap.className = 'chat-msg chat-msg--bot';
@@ -111,12 +113,12 @@ window.KonaChat = (function () {
     p.className = 'chat-bubble__text';
     p.textContent = m.text;
     bubble.appendChild(p);
-    if (m.cta === 'booking') {
+    if (CTA[m.cta]) {
       var b = document.createElement('button');
       b.className = 'btn btn--secondary btn--block';
       b.type = 'button';
-      b.setAttribute('data-chat-booking', '');
-      b.textContent = '상담 예약하기';
+      b.setAttribute('data-chat-' + m.cta, '');
+      b.textContent = CTA[m.cta];
       bubble.appendChild(b);
     }
     wrap.appendChild(bubble);
@@ -356,14 +358,16 @@ window.KonaChat = (function () {
     if (!mobile.matches) input.focus({ preventScroll: true });
   }
 
-  /* ---------- [상담 예약하기] ---------- */
-  function openBooking() {
-    if (document.getElementById('modal-booking')) {
-      Kona.openModal('modal-booking', fab);   /* opener = FAB → 포커스 복귀 · 유입 경로 "chatbot" */
+  /* ---------- [상담 예약하기] · [무료로 체험하기] ----------
+     랜딩: 그 모달을 바로 (opener = FAB → 포커스 복귀 · 유입 경로 "chatbot")
+     다른 페이지: index.html?action=booking|simulator로 이동 (Sandbox iframe은 바깥 창) */
+  function openFromChat(action) {
+    if (document.getElementById('modal-' + action)) {
+      Kona.openModal('modal-' + action, fab);
       return;
     }
-    var url = new URL('index.html?action=booking&source=chatbot', window.location.href).href;
-    if (window.top !== window) window.top.location.href = url;   /* Sandbox iframe → 바깥 창 이동 */
+    var url = new URL('index.html?action=' + action + '&source=chatbot', window.location.href).href;
+    if (window.top !== window) window.top.location.href = url;
     else window.location.href = url;
   }
 
@@ -381,7 +385,9 @@ window.KonaChat = (function () {
     } else if (t.hasAttribute('data-chat-retry')) {
       retry(t.closest('[data-msg]').getAttribute('data-msg'));
     } else if (t.hasAttribute('data-chat-booking')) {
-      openBooking();
+      openFromChat('booking');
+    } else if (t.hasAttribute('data-chat-simulator')) {
+      openFromChat('simulator');
     } else if (t.hasAttribute('data-chat-new')) {
       newConversation();
       focusInput();

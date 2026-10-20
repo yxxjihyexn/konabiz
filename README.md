@@ -137,9 +137,44 @@ python -m scripts.seed
 - `?sandbox=1`과 `?state=` 미리보기(suspended·issuing·no-payments·loading·error)는 이 API를 부르지 않고 `js/mock-data.js`의 김민준 예시값으로 보여줍니다.
 - 결제·포인트 충전·이동·거래 생성 API는 없습니다(거래는 seed 데이터만).
 
+### 챗봇 API (OpenAI + 규칙 답변 하이브리드)
+
+09 챗봇(전역 플로팅 위젯)이 쓰는 API. 로그인 없이 쓰고, Sandbox(`?sandbox=1`) 안의 챗봇도 같은 API를 씁니다 (회사 데이터를 바꾸지 않음).
+
+| API | 설명 |
+|---|---|
+| `POST /api/chat` | `{message, quick_reply_id?, conversation_id, anon_id?}` → `{text, cta}` |
+
+**구조**
+- **빠른 답변 버튼**(`quick_reply_id`: lead-time · limits · pricing · booking) → `backend/app/chat_rules.py`의 정해진 답변. OpenAI를 부르지 않습니다. 버튼 이름과 똑같이 입력해도 같음.
+- **직접 입력한 질문** → OpenAI가 답합니다. 시스템 프롬프트에 승인된 FAQ(사이트 화면 문구 기준, 출처 표기)만 넣고, FAQ에 없는 사실·서비스와 관계없는 질문은 지어내지 않고 상담 안내 + 상담 예약 버튼. 역할 변경·시스템 프롬프트 공개·지시 무시 요청은 따르지 않습니다.
+- 답변 문구·FAQ·대체 답변은 `chat_rules.py` 한 곳에만 있습니다. 프론트(`js/chat-reply.js`)에는 버튼 id·이름만 있고 `KonaChatReply.get()`이 `/api/chat`을 부릅니다.
+- **cta**: `booking`([상담 예약하기]) · `simulator`([무료로 체험하기]) · `null`(버튼 없음). 랜딩에서는 그 모달을 바로 열고, 다른 페이지·Sandbox iframe에서는 바깥 창을 `index.html?action=booking|simulator&source=chatbot`으로 옮겨 모달을 엽니다.
+
+**OpenAI 호출**
+- 모델: `.env`의 `OPENAI_MODEL` (기본 `gpt-4o-mini`), 공식 SDK `openai` (`requirements.txt`에 버전 고정)
+- Structured Outputs로 `{text, cta}`를 받고 서버에서 다시 검사 (text가 비면 대체 답변, cta가 목록 밖이면 `null`, 600자 넘으면 자름)
+- 같은 대화의 최근 6개 메시지만 맥락으로 보냄 (DB에서 `uid`·`conversation_id`가 둘 다 맞는 대화만 — 남의 대화는 읽지 않음)
+- 사용자 이름·이메일은 보내지 않고, 질문 안의 이메일·전화번호·카드번호 형태는 `[이메일]`처럼 가려서 보냄
+- 답변 상한 300토큰, temperature 0.2, 타임아웃 15초(재시도 없음 — 화면의 20초 대기보다 짧게)
+- API 키는 서버에서만 씁니다. 응답·JS·로그에 넣지 않습니다.
+
+**대체 답변** — OpenAI 실패·타임아웃·키 없음(`OPENAI_API_KEY`가 비었거나 공백)·응답 형식 오류면 오류 문구 대신 "지금은 자세히 답변드리기 어려워요. 정확한 안내는 상담에서 도와드릴게요." + [상담 예약하기]. 서버 로그에는 `챗봇: OpenAI 실패 (APITimeoutError)`처럼 오류 종류만 남깁니다. 서버에 아예 닿지 못하면(네트워크·5xx) 화면은 기존 실패 표시("답변을 받지 못했어요" + [다시 보내기]).
+
+**입력 검사·사용량 제한**
+- 메시지는 앞뒤 공백을 빼고 검사: 비었으면 422 "질문을 입력해주세요.", 500자 초과 422 "질문은 500자까지 입력할 수 있어요."
+- 같은 uid 1분 10회, 같은 IP 1분 30회를 넘으면 429 "잠시 후 다시 질문해주세요." (빠른 답변 포함. 서버 메모리 기준이라 재시작하면 초기화, 새 컬렉션 없음)
+- 422·429 문구는 화면에서 봇 답변처럼 보여줍니다.
+
+**저장** — `chats` 컬렉션에 `{uid, conversation_id}`로 질문·답변을 쌓습니다 (`messages: [{id, from, text, cta?, quick_reply_id?, created_at}]`, `created_at`, `updated_at`).
+- `uid`: 로그인했으면 `users._id` 문자열(쿠키로 서버가 판단, `anon_id`는 무시), 아니면 브라우저 임시 ID `anon_id`
+- 로그인 성공 → 새 대화(비로그인 대화를 계정에 합치지 않음), 로그아웃 → 임시 ID까지 삭제 (`js/chatbot.js`)
+- DB가 없으면 답변만 하고 저장·맥락은 건너뜁니다. 테스트로 쌓인 대화는 `python -m scripts.seed`로 지워집니다.
+- 로그인 사용자의 포인트·거래를 챗봇이 조회해 답하는 기능은 없습니다.
+
 ### 테스트
 
-`backend` 폴더에서 (DB에 붙지 않음 — 임직원 관리 테스트는 메모리 DB `mongomock` 사용):
+`backend` 폴더에서 (DB·OpenAI에 붙지 않음 — 메모리 DB `mongomock`, OpenAI는 가짜 응답):
 
 ```powershell
 pip install -r requirements-dev.txt
@@ -149,3 +184,4 @@ python -m unittest discover -s tests -t . -v
 - `test_reservations.py`: 예약 시간 규칙·입력 검사
 - `test_members.py`: 상태 전이 전체, 409(이미 바뀐 상태·중복 이메일·회수된 이메일), 404(다른 회사·관리자·없는 id), 임직원 계정 403, 임시 비밀번호 1회 노출·재발급 후 이전 비밀번호 실패, 첫 로그인 시 카드 사용 중, 대시보드 숫자
 - `test_me.py`: 본인 카드만 조회(새 직원에게 김민준 데이터 없음), 김민준 잔액·거래 7건(차단 1), 합계에서 법인경비P 제외, 최신순·KST, 거래 0건, 민감 정보 없음, 관리자 403, 비로그인 401, 카드 없음 404
+- `test_chat.py`: 빠른 답변(OpenAI 0회), AI 답변·FAQ·맥락 6개, 개인정보 가림, cta 검사, 타임아웃·연결 실패 대체 답변, 키 없음, 빈 값·500자, 429(uid·IP·시간 지나면 풀림), 비로그인 anon_id·로그인 user id 저장, 남의 대화 읽기·쓰기 안 됨, DB 없이 답변

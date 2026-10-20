@@ -4,6 +4,7 @@ mock-data.js를 고치면 여기도 같이 고친다. 숫자가 어긋나면 see
 mock-data.js에 없는 것: 데모 로그인 이메일·비밀번호(README의 데모 계정),
 예약 3건(seed 실행일 다음 평일들 — 03 예약 화면의 "마감" 칸), 챗봇 대화 1건(구조 확인용 예시).
 """
+from app.chat_rules import ANSWERS
 
 COMPANY = "가나다테크(주)"
 
@@ -95,12 +96,12 @@ RESERVATIONS = [
     },
 ]
 
-# 챗봇 대화 — 김민준(로그인 사용자) 1건. 답변 문구는 js/chat-reply.js 퀵 리플라이 그대로
+# 챗봇 대화 — 김민준(로그인 사용자) 1건. 답변 문구는 app/chat_rules.py 빠른 답변 그대로
 # 메시지: from, 문구, cta, (월, 일, 시, 분, 초) KST
 DEMO_CHAT = {
     "conversation_id": "demo-conv-0001",
     "messages": [
         ("user", "결제 제한은 어떻게 설정하나요?", None, (10, 16, 9, 30, 0)),
-        ("bot", "관리자 대시보드에서 부서·임직원별로 사용 시간, 한도, 업종을 정할 수 있어요. 정한 규칙은 결제하는 순간 바로 적용돼요.", None, (10, 16, 9, 30, 1)),
+        ("bot", ANSWERS["limits"]["text"], ANSWERS["limits"]["cta"], (10, 16, 9, 30, 1)),
     ],
 }

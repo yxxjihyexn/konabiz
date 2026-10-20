@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app import db
-from app.routers import auth, dashboard, health, me, members, reservations
+from app.routers import auth, chat, dashboard, health, me, members, reservations
 from app.static_site import router as static_router
 
 
@@ -36,7 +36,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
     return JSONResponse(status_code=422, content={"detail": errors})
 
 
-# API 라우터 — 다음 단계: chat을 여기에 추가
+# API 라우터
 API_ROUTERS = [
     health.router,
     auth.router,
@@ -44,6 +44,7 @@ API_ROUTERS = [
     members.router,
     dashboard.router,
     me.router,
+    chat.router,
 ]
 for api_router in API_ROUTERS:
     app.include_router(api_router, prefix="/api")
