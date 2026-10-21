@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# cmd는 LF 줄바꿈의 한글 bat을 잘못 읽음
+*.bat text eol=crlf

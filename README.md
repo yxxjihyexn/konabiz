@@ -107,6 +107,24 @@ uvicorn app.main:app --reload --port 8000
 - 외장하드의 드라이브 문자가 바뀌면 `.venv`가 동작하지 않으니 `.venv`를 지우고 다시 만드세요.
 - 가맹점 판별 모델 파일(`backend/ml/models/merchant_classifier.joblib`, 16.9MB)은 저장소에 포함되어 있어 따로 학습하지 않아도 됩니다.
 
+### 발표용 — 같은 네트워크의 다른 PC에서 접속
+
+1. (처음 한 번) Windows 방화벽에서 TCP 8000 인바운드 허용 — 관리자 PowerShell:
+   `New-NetFirewallRule -DisplayName "KonaBiz 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private,Public`
+2. 발표 장소 네트워크에서 MongoDB Atlas **Network Access**에 지금 공인 IP 추가 (장소가 바뀌면 공인 IP도 바뀜 → 로그인·예약이 DB 오류로 실패)
+3. `backend\run_lan.bat` 실행 (탐색기에서 더블클릭) — 가상환경을 켜고, 접속 주소(`http://192.168.x.x:8000`)를 출력한 뒤 서버를 띄움
+4. 다른 PC 브라우저에서 출력된 주소로 접속. 끄기는 창에서 Ctrl+C
+
+직접 실행하려면 (`backend` 폴더, 가상환경 켠 상태):
+
+```powershell
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+- `--host 0.0.0.0`이 없으면 이 PC(localhost)에서만 열림. 발표 때는 `--reload`를 빼서 파일 저장으로 서버가 다시 시작되지 않게 함
+- 주소·링크·API 호출은 모두 상대 경로라 IP로 접속해도 그대로 동작. http라서 `COOKIE_SECURE=false` 유지
+- 인터넷 연결 필요: DB(Atlas)·챗봇 직접 입력(OpenAI)·글꼴(Pretendard CDN). 글꼴만 실패하면 기본 글꼴로 보임
+
 ---
 
 ## 기술 상세

@@ -12,6 +12,12 @@
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "backend", "--reload", "--reload-dir", "backend", "--port", "8000"],
       "port": 8000
+    },
+    {
+      "name": "konabiz-lan",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "backend\\run_lan.bat"],
+      "port": 8000
     }
   ]
 }
