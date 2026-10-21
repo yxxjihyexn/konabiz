@@ -74,7 +74,7 @@ window.KonaClassifier = (function () {
         '<div class="classifier__row">' +
           '<div class="field__control classifier__control">' +
             '<input id="' + id + '-name" class="field__input" type="text" maxlength="' + MAX_LEN + '" autocomplete="off" ' +
-            'placeholder="가맹점 이름을 입력해보세요"></div>' +
+            'aria-label="가맹점 이름" placeholder="가맹점 이름"></div>' +
           '<button class="btn btn--primary classifier__submit" type="submit" disabled>판별하기</button>' +
         '</div>' +
       '</form>' +
