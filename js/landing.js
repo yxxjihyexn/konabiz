@@ -37,10 +37,11 @@
     { id: 'hospital', name: '병원·약국', type: 'fitness' },
     { id: 'office', name: '사무용품', type: 'expense' },
     { id: 'travel', name: '출장', type: 'expense' },
+    { id: 'entertain', name: '거래처 접대', type: 'expense' },
     { id: 'bar', name: '유흥주점', type: 'restricted' }
   ];
   var BAR_ALERT = { title: '제한 업종', desc: '유흥주점은 어떤 포인트로도 결제할 수 없어요' };
-  /* 상담예약 1단계 업종 칩 전체 — 거래처 접대(entertain)는 규칙 카드에만 있고 시뮬레이터 가맹점에는 없음 */
+  /* 업종 칩 전체 (상담예약 1단계 · 시뮬레이터 직접 설정) — 유흥주점 뺀 가맹점과 같음 */
   var ALL_CATS = ['restaurant', 'cafe', 'book', 'fitness', 'hospital', 'office', 'travel', 'entertain'];
 
   /* 프리셋 1은 기획서 9.6 문구 그대로. 프리셋 2~4 문구·잔액은 기획서 14.1 "남은 정의 항목" — 임시안 */
@@ -81,19 +82,14 @@
       custom: { time: [0, 24], limit: 30000, cats: ['restaurant', 'cafe', 'book', 'hospital', 'office', 'travel', 'entertain'] }
     },
     {
+      /* 직접 설정 — 규칙 카드 대신 "우리 회사 규칙 정하기"(허용 업종 칩 · 1회 한도). custom은 처음 값 */
       mode: 'priority',
-      allowed: ['restaurant', 'fitness', 'office'],
-      limit: 50000,
-      rules: [
-        ['허용 업종', '일반음식점, 체력단련·골프, 사무용품 — 고른 업종에서만 결제돼요'],
-        ['1회 한도  ·  50,000원', '50,000원까지 결제할 수 있어요'],
-        ['결제 가능 시간  ·  09:00 - 20:00', '체험에서는 시간 제한을 적용하지 않아요'],
-        ['조건 바꿔보기', '상담 예약 1단계에서 우리 회사 조건으로 직접 바꿔볼 수 있어요']
-      ],
+      user: true,
       balance: { meal: 150000, fitness: 100000, welfare: 100000, expense: 500000 },
       custom: { time: [9, 20], limit: 50000, cats: ['restaurant', 'fitness', 'office'] }
     }
   ];
+  var USER_PRESET = 3;
 
   /* 결제 판단: { ok, amount, desc, after(잔액), changed[] } */
   function judge(preset, merchant, amount) {
@@ -102,8 +98,10 @@
 
     if (merchant.type === 'restricted') return block(eun(merchant.name) + ' 제한 업종이라 결제할 수 없어요');
     if (preset.blocked && preset.blocked.indexOf(merchant.id) > -1) return block(eun(merchant.name) + ' 회사가 막아둔 업종이라 결제할 수 없어요');
-    if (preset.allowed && preset.allowed.indexOf(merchant.id) === -1) return block(eun(merchant.name) + ' 허용 업종이 아니라 결제할 수 없어요');
-    if (preset.limit && amount > preset.limit) return block('1회 한도 ' + won(preset.limit) + '을 넘어 결제할 수 없어요');
+    if (preset.allowed && preset.allowed.indexOf(merchant.id) === -1) return block('회사에서 허용하지 않은 업종이에요');
+    if (preset.limit && amount > preset.limit) {
+      return block('1회 한도 ' + won(preset.limit) + (preset.user ? '을 넘었어요' : '을 넘어 결제할 수 없어요'));
+    }
 
     var order = merchant.type === 'expense' ? ['expense']
       : preset.mode === 'split' ? [merchant.type, 'welfare'].filter(function (p, i, a) { return a.indexOf(p) === i; })
@@ -131,7 +129,13 @@
   }
 
   var sim = document.getElementById('modal-simulator');
-  var simState = { preset: 0, merchant: 'cafe', amount: 30000, busy: false, result: null };
+  var simState = { preset: 0, merchant: 'cafe', amount: 30000, busy: false, result: null, timer: 0, rules: null };
+  /* 직접 설정에서 고른 규칙 — 모달을 닫으면 처음 값으로 */
+  var defaultUserRules = function () {
+    var c = PRESETS[USER_PRESET].custom;
+    return { limit: c.limit, cats: c.cats.slice() };
+  };
+  simState.rules = defaultUserRules();
   var lastExperience = store.get('kona.simLast');   /* 상담예약 선택 조건 자동 채움용 */
 
   if (sim) {
@@ -146,13 +150,43 @@
     var resultEl = sim.querySelector('[data-sim-result]');
     var walletEl = sim.querySelector('[data-sim-wallet]');
     var actionsEl = sim.querySelector('[data-sim-actions]');
+    var rulesTitle = sim.querySelector('[data-sim-rules-title]');
+    var customEl = sim.querySelector('[data-sim-custom]');
+    var simLimitRange = customEl.querySelector('[data-range="sim-limit"]');
+    var simLimit = simLimitRange.querySelector('[data-range-single]');
+    var simChips = customEl.querySelectorAll('.chip-toggle[data-cat]');
+    var chipsHint = customEl.querySelector('[data-sim-chips-hint]');
 
     merchantSel.innerHTML = MERCHANTS.map(function (m) {
       return '<option value="' + m.id + '">' + m.name + '</option>';
     }).join('');
 
+    /* 직접 설정 컨트롤을 simState.rules대로 그림 */
+    var paintUserRules = function () {
+      var r = simState.rules;
+      var min = Number(simLimit.min), max = Number(simLimit.max);
+      simLimit.value = r.limit;
+      simLimitRange.querySelector('.range__track').style.setProperty('--to', ((r.limit - min) / (max - min) * 100) + '%');
+      simLimitRange.querySelector('[data-range-value]').textContent = won(r.limit);
+      simLimit.setAttribute('aria-valuetext', won(r.limit));
+      simChips.forEach(function (chip) {
+        chip.setAttribute('aria-checked', String(r.cats.indexOf(chip.getAttribute('data-cat')) > -1));
+      });
+      chipsHint.hidden = r.cats.length > 0;
+    };
+
+    /* 현재 탭의 판정 기준 — 직접 설정은 고른 허용 업종 · 1회 한도를 씀 */
+    var activePreset = function () {
+      var p = PRESETS[simState.preset];
+      return p.user ? Object.assign({}, p, { allowed: simState.rules.cats, limit: simState.rules.limit }) : p;
+    };
+
     var renderRules = function () {
       var p = PRESETS[simState.preset];
+      rulesTitle.textContent = p.user ? '우리 회사 규칙 정하기' : '차감 규칙';
+      rulesEl.hidden = !!p.user;
+      customEl.hidden = !p.user;
+      if (p.user) { paintUserRules(); return; }
       rulesEl.innerHTML = p.rules.map(function (r) {
         return '<li class="rule-card"><p class="rule-card__title">' + r[0] + '</p><p class="rule-card__desc">' + r[1] + '</p></li>';
       }).join('') +
@@ -188,24 +222,46 @@
       amountGroup.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-disabled', String(locked)); });
     };
 
-    var simReset = function () {
-      var p = PRESETS[simState.preset];
+    /* 결과·지갑·결제 잠금만 처음으로 (직접 설정 규칙을 바꿀 때 — 고른 업종·금액은 그대로) */
+    var clearResult = function () {
+      clearTimeout(simState.timer);
       simState.busy = false;
       simState.result = null;
-      simState.merchant = 'cafe';
-      simState.amount = 30000;
-      merchantSel.value = 'cafe';
-      Kona.selectItem(amountGroup, amountGroup.querySelector('[data-amount="30000"]'));
-      amountValue.textContent = won(30000);
       setLocked(false);
       swipeBtn.disabled = false;
       swipeBtn.classList.remove('is-loading');
       swipeBtn.textContent = '카드 긁기';
       actionsEl.hidden = true;
-      renderRules();
-      renderWallet(p.balance);
+      renderWallet(PRESETS[simState.preset].balance);
       renderResult(null);
     };
+
+    var simReset = function () {
+      simState.merchant = 'cafe';
+      simState.amount = 30000;
+      merchantSel.value = 'cafe';
+      Kona.selectItem(amountGroup, amountGroup.querySelector('[data-amount="30000"]'));
+      amountValue.textContent = won(30000);
+      renderRules();
+      clearResult();
+    };
+
+    /* 직접 설정 — 규칙을 바꾸면 결과 초기화 */
+    simLimit.addEventListener('input', function () {
+      simState.rules.limit = Number(simLimit.value);
+      paintUserRules();
+      clearResult();
+    });
+    simChips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var cat = chip.getAttribute('data-cat');
+        var cats = simState.rules.cats;
+        var i = cats.indexOf(cat);
+        if (i > -1) cats.splice(i, 1); else cats.push(cat);
+        paintUserRules();
+        clearResult();
+      });
+    });
 
     presetTabs.addEventListener('click', function (e) {
       var tab = e.target.closest('[role="tab"]');
@@ -231,8 +287,8 @@
       simState.busy = true;
       setLocked(true);
       swipeBtn.classList.add('is-loading');
-      setTimeout(function () {
-        var p = PRESETS[simState.preset];
+      simState.timer = setTimeout(function () {
+        var p = activePreset();
         var merchant = MERCHANTS.filter(function (m) { return m.id === simState.merchant; })[0];
         var r = judge(p, merchant, simState.amount);
         simState.busy = false;
@@ -245,6 +301,9 @@
         actionsEl.hidden = false;
 
         lastExperience = { preset: simState.preset };
+        if (p.user) {   /* 직접 설정은 고른 값 그대로 상담예약 선택 조건에 채움 */
+          lastExperience.custom = { time: PRESETS[USER_PRESET].custom.time, limit: p.limit, cats: p.allowed.slice() };
+        }
         store.set('kona.simLast', lastExperience);
 
         /* 결제 버튼이 잠기므로 다음 행동(상담 예약하기)으로 포커스 이동. 모바일은 결과 박스로 스크롤 */
@@ -263,6 +322,7 @@
       simState.preset = 0;
       Kona.selectItem(presetTabs, presetTabs.querySelector('[data-preset="0"]'));
       simPanel.setAttribute('aria-labelledby', 'sim-tab-0');
+      simState.rules = defaultUserRules();
       simReset();
     });
 
@@ -778,7 +838,7 @@
         : opener && opener.closest('.cta') ? 'closing-cta' : opener && opener.closest('.hero') ? 'hero' : 'landing';
       /* 선택 조건: 시뮬레이터에서 마지막으로 체험한 프리셋 값 → 없으면 기본값(직접 설정) */
       if (bkState.view === '1' && !bk.hasAttribute('data-dirty')) {
-        applyCustom(PRESETS[lastExperience ? lastExperience.preset : 3].custom);
+        applyCustom((lastExperience && lastExperience.custom) || PRESETS[lastExperience ? lastExperience.preset : USER_PRESET].custom);
       }
       /* 일정 선택 단계에서 다시 열면 마감 시간을 새로 불러옴 */
       if (bkState.view === '2') loadSlots(true);
@@ -792,7 +852,7 @@
       }
     });
 
-    applyCustom(PRESETS[3].custom);
+    applyCustom(PRESETS[USER_PRESET].custom);
     updateSummary();
 
     /* ?action=booking|simulator — 다른 화면 챗봇의 [상담 예약하기]·[무료로 체험하기]에서 넘어왔을 때 바로 열기

@@ -22,6 +22,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--gap-title);
+  scroll-margin-top: 40px;   /* 앵커 이동 시 제목이 화면 끝에 붙지 않게 */
 }
 
 .section__title {               /* H1_600 32/40 */
@@ -141,7 +142,7 @@
 .banner__btn { flex-shrink: 0; }
 
 /* ---------- 6. 가격정책 ---------- */
-.price { display: flex; flex-direction: column; gap: var(--gap-title); }
+.price { display: flex; flex-direction: column; gap: 40px; }   /* 요약 ↔ 표 — 섹션 타이틀 간격과 따로 */
 
 .price-summary { display: flex; gap: var(--gap-card); }
 .price-item {
@@ -309,6 +310,10 @@
 .rule-card__title { font-size: 16px; line-height: 26px; font-weight: 600; white-space: pre-wrap; }
 .rule-card__desc { color: var(--text-secondary-light); }
 
+/* 직접 설정 — 우리 회사 규칙 정하기 (range · chip-area는 상담예약 선택 조건과 같은 컴포넌트) */
+.sim-custom { display: flex; flex-direction: column; gap: 24px; }
+.sim-custom__hint { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
 /* 결제해보기 */
 .pay-form { display: flex; flex-direction: column; gap: 24px; transition: opacity 0.2s ease-out; }
 .pay-form.is-locked { opacity: 0.5; }
@@ -471,6 +476,8 @@
 @media (max-width: 767px) {
   /* 공통 타이틀 H2_600 */
   .section__title { font-size: 24px; line-height: 32px; }
+  .section { scroll-margin-top: 24px; }
+  .price { gap: 24px; }
 
   /* Hero */
   .hero__text { gap: 16px; }

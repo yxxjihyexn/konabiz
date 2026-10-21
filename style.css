@@ -64,9 +64,9 @@
   --content-full: 1200px;
   --content-narrow: 792px;
   --gutter: 40px;          /* 1280 미만 화면의 좌우 최소 여백 */
-  --gap-outer: 80px;       /* GNB ↔ 본문 ↔ 푸터 */
-  --gap-section: 64px;     /* 섹션 간 */
-  --gap-title: 40px;       /* 섹션 타이틀 ↔ 콘텐츠 */
+  --gap-outer: 120px;      /* GNB ↔ 본문 ↔ 푸터 (랜딩) */
+  --gap-section: 120px;    /* 섹션 간 (랜딩) */
+  --gap-title: 48px;       /* 섹션 타이틀 ↔ 콘텐츠 (랜딩) */
   --gap-card: 24px;        /* 카드 간 */
   --header-h: 80px;
 
@@ -1123,6 +1123,15 @@ a.sidebar__link:hover { background: var(--neutral-canvas); }
 .progress { flex: 1 1 auto; height: 8px; border-radius: var(--radius-full); background: var(--neutral-wash); overflow: hidden; }
 .progress__fill { height: 100%; border-radius: var(--radius-full); background: var(--neutral-ink); }
 
+/* Tablet (768–1023): 랜딩 여백은 PC·모바일 사이 값 */
+@media (max-width: 1023px) {
+  :root {
+    --gap-outer: 100px;
+    --gap-section: 100px;
+    --gap-title: 40px;
+  }
+}
+
 /* 앱 화면 중단점 */
 @media (max-width: 1023px) {
   .sidebar { display: none; }
@@ -1151,9 +1160,9 @@ a.sidebar__link:hover { background: var(--neutral-canvas); }
 @media (max-width: 767px) {
   :root {
     --gutter: 20px;
-    --gap-outer: 64px;
-    --gap-section: 48px;
-    --gap-title: 24px;
+    --gap-outer: 80px;
+    --gap-section: 80px;
+    --gap-title: 32px;
     --gap-card: 16px;
     --header-h: 56px;
   }

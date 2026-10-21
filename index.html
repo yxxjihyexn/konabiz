@@ -382,8 +382,54 @@
         <div id="sim-panel" class="sim-body" role="tabpanel" aria-labelledby="sim-tab-0">
           <!-- 차감 규칙 -->
           <div class="sim-col sim-col--rules">
-            <h3 class="sim-col__title">차감 규칙</h3>
+            <h3 class="sim-col__title" data-sim-rules-title>차감 규칙</h3>
             <ul class="rule-list" data-sim-rules></ul>
+            <!-- 직접 설정: 상담예약 선택 조건과 같은 컴포넌트 (range · chip-area) -->
+            <div class="sim-custom" data-sim-custom hidden>
+              <div class="range" data-range="sim-limit">
+                <div class="range__head">
+                  <label for="sim-limit">1회 한도</label>
+                  <span class="range__value" data-range-value>50,000원</span>
+                </div>
+                <div class="range__track">
+                  <input id="sim-limit" class="range__input" type="range" min="10000" max="100000" step="10000" value="50000" data-range-single>
+                </div>
+                <div class="range__scale" aria-hidden="true"><span>10,000원</span><span>100,000원</span></div>
+              </div>
+              <div class="chip-area" role="group" aria-labelledby="sim-chips-label" aria-describedby="sim-chips-hint">
+                <p id="sim-chips-label" class="chip-area__title">허용 업종 (여러 개 선택 가능)</p>
+                <div class="chip-group" role="group" aria-labelledby="sim-chip-meal">
+                  <p id="sim-chip-meal" class="chip-group__title">식대P</p>
+                  <div class="chip-group__row">
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="restaurant">일반음식점</button>
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="cafe">커피전문점</button>
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="book">도서 · 학원</button>
+                  </div>
+                </div>
+                <div class="chip-group" role="group" aria-labelledby="sim-chip-fit">
+                  <p id="sim-chip-fit" class="chip-group__title">체력단련P</p>
+                  <div class="chip-group__row">
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="fitness">체력단련 · 골프</button>
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="hospital">병원 · 약국</button>
+                  </div>
+                </div>
+                <div class="chip-group" role="group" aria-labelledby="sim-chip-exp">
+                  <p id="sim-chip-exp" class="chip-group__title">법인경비P (독립관리)</p>
+                  <div class="chip-group__row">
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="office">사무용품</button>
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="travel">출장(항공 · 숙박)</button>
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" data-cat="entertain">거래처 접대</button>
+                  </div>
+                </div>
+                <div class="chip-group" role="group" aria-labelledby="sim-chip-block">
+                  <p id="sim-chip-block" class="chip-group__title">제한업종 (항상 차단)</p>
+                  <div class="chip-group__row">
+                    <button class="chip-toggle" type="button" role="checkbox" aria-checked="false" aria-disabled="true">유흥주점</button>
+                  </div>
+                </div>
+                <p id="sim-chips-hint" class="sim-custom__hint" data-sim-chips-hint hidden>허용 업종을 하나 이상 골라보세요</p>
+              </div>
+            </div>
           </div>
 
           <!-- 결제해보기 -->

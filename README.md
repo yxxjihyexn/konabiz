@@ -114,6 +114,7 @@ uvicorn app.main:app --reload --port 8000
 2. 발표 장소 네트워크에서 MongoDB Atlas **Network Access**에 지금 공인 IP 추가 (장소가 바뀌면 공인 IP도 바뀜 → 로그인·예약이 DB 오류로 실패)
 3. `backend\run_lan.bat` 실행 (탐색기에서 더블클릭) — 가상환경을 켜고, 접속 주소(`http://192.168.x.x:8000`)를 출력한 뒤 서버를 띄움
 4. 다른 PC 브라우저에서 출력된 주소로 접속. 끄기는 창에서 Ctrl+C
+5. 서버 창은 빠른 편집(QuickEdit)을 꺼서 띄우므로 창을 클릭해도 멈추지 않음. 그래도 응답이 멈추면 그 창에서 Esc
 
 직접 실행하려면 (`backend` 폴더, 가상환경 켠 상태):
 
