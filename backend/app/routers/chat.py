@@ -6,7 +6,7 @@
   최근 6개 메시지 → {text, cta, used_ids} 구조화 응답을 서버에서 다시 검증 → {text, cta, sources}
   · 1위 유사도가 rag.THRESHOLD 미만이고 키워드 일치도 없으면 [참고 지식: 관련 지식 없음]으로 호출 (규칙대로 상담·범위 안내, sources 없음)
   · 임베딩 파일 없음·해시 불일치·임베딩 API 실패 → 검색 없이 지식 전체를 넣음 (화면 오류 없음, sources 없음 —
-    54개 중 비슷한 id(F24·N24)를 잘못 고르는 경우가 있어 검증할 수 없음)
+    전체 중에서는 비슷한 id(F24·N24)를 잘못 고르는 경우가 있어 검증할 수 없음)
   · used_ids는 검색해서 프롬프트에 넣은 항목 안에 있는 것만 sources로 (빠른 답변·대체 답변은 sources 없음)
   OpenAI에는 사용자 이름·이메일을 보내지 않고, 질문 안의 이메일·전화번호·카드번호 형태는 가려서 보냄
 - OpenAI 실패·타임아웃·키 없음 → chat_rules.FALLBACK (오류 문구로 끝내지 않음). 로그에는 오류 종류만
@@ -174,13 +174,22 @@ def mask_personal(text: str) -> str:
     return PHONE_RE.sub("[전화번호]", text)
 
 
+ENDING_RE = re.compile(r"이어요")
+
+
+def fix_endings(text: str) -> str:
+    """'300,000원이어요' → '300,000원이에요'. 프롬프트로 막아도 gpt-4o-mini가 자주 써서 서버에서 고침
+    (이 서비스 답변에서 '이어요'는 '이다'의 어미로만 나옴)."""
+    return ENDING_RE.sub("이에요", text)
+
+
 def clean_answer(raw, allowed: list[dict] | None = None) -> dict | None:
     """구조화 응답 검증 — text가 비면 None, cta가 목록 밖이면 none,
     used_ids는 프롬프트에 넣은 항목(allowed) 안의 id만 sources로 (순서 유지, 중복 제거)."""
     text = getattr(raw, "text", None) if raw is not None else None
     if not isinstance(text, str) or not text.strip():
         return None
-    text = text.strip()
+    text = fix_endings(text.strip())
     if len(text) > ANSWER_MAX:
         text = text[:ANSWER_MAX].rstrip() + "…"
     cta = getattr(raw, "cta", None)

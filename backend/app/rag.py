@@ -1,6 +1,6 @@
 """챗봇 지식 검색 (RAG) — knowledge/faq.json + 미리 계산한 임베딩(faq_embeddings.json).
 
-- 지식 54개라 벡터 DB 없이 표준 라이브러리로 코사인 유사도를 계산함
+- 지식이 수십 개라 벡터 DB 없이 표준 라이브러리로 코사인 유사도를 계산함
 - 임베딩 파일은 scripts/build_knowledge.py로 만듦. 파일이 없거나 faq.json 해시·모델이 다르면
   경고 로그 + 검색 없이 지식 전체를 프롬프트에 넣음 (routers/chat.py)
 - 질문 임베딩은 routers/chat.py가 OpenAI로 계산해서 search()에 넘김
@@ -34,7 +34,8 @@ WORD_RE = re.compile(r"[가-힣A-Za-z0-9]+")
 
 
 def faq_hash(raw: bytes) -> str:
-    return hashlib.sha256(raw).hexdigest()
+    """줄바꿈을 LF로 맞춰서 계산 — Windows에서 git이 CRLF로 바꿔 받아도 같은 해시."""
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def load_faq() -> tuple[list[dict], str]:
@@ -42,9 +43,14 @@ def load_faq() -> tuple[list[dict], str]:
     return json.loads(raw.decode("utf-8")), faq_hash(raw)
 
 
+def questions_of(item: dict) -> list[str]:
+    """대표 질문 + 비슷한 질문 표현(alt_questions, 없어도 됨)."""
+    return [item["question"], *item.get("alt_questions", [])]
+
+
 def embed_text(item: dict) -> str:
-    """지식 항목을 임베딩할 문장 — 카테고리 · 질문 · 답변."""
-    return f"[{item['category']}] {item['question']}\n{item['answer']}"
+    """지식 항목을 임베딩할 문장 — 카테고리 · 질문(비슷한 표현 포함) · 답변."""
+    return f"[{item['category']}] {' / '.join(questions_of(item))}\n{item['answer']}"
 
 
 def normalize(vec: list[float]) -> list[float]:
@@ -72,7 +78,7 @@ def build_keywords(items: list[dict]) -> dict[str, set[str]]:
     """낱말 → 그 낱말이 나오는 항목 id. 여러 항목에 흔히 나오는 낱말·서술어·숫자만인 낱말은 뺌."""
     found = defaultdict(set)
     for x in items:
-        for t in terms_of(x["question"] + " " + x["answer"]):
+        for t in terms_of(" ".join(questions_of(x)) + " " + x["answer"]):
             found[t].add(x["id"])
     return {t: ids for t, ids in found.items()
             if len(ids) <= KEYWORD_MAX_ITEMS and not t.endswith(("요", "면")) and not t.isdigit()}

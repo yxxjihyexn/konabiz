@@ -155,6 +155,16 @@ class ChatTest(unittest.TestCase):
         self.ai.return_value = fake_answer(text="   ")
         self.assertEqual(self.send("질문", conv="c2"), CR.FALLBACK)
 
+    def test_wrong_ending_is_fixed(self):
+        self.ai.return_value = fake_answer(text="도입비는 최초 1회 300,000원이어요. 월 이용료는 0원이어요.")
+        self.assertEqual(self.send("도입비 얼마예요?")["text"], "도입비는 최초 1회 300,000원이에요. 월 이용료는 0원이에요.")
+
+    def test_prompt_ends_with_final_check(self):
+        self.send("도입비 얼마예요?")
+        system = self.ai.call_args.args[0][0]["content"]
+        self.assertTrue(system.endswith(CR.FINAL_CHECK))
+        self.assertIn('"카드 바로 나와요?"', system)   # cta booking 예시
+
     def test_long_answer_is_cut(self):
         self.ai.return_value = fake_answer(text="가" * 1000)
         self.assertLessEqual(len(self.send("질문")["text"]), C.ANSWER_MAX + 1)
@@ -306,7 +316,7 @@ class ChatTest(unittest.TestCase):
             with self.assertLogs("uvicorn.error", "WARNING") as logs:
                 res = self.send("사원증형이 뭐예요?")
             self.assertEqual(len(prompt_ids(self.ai.call_args.args[0])), len(FAQ_ITEMS))
-            self.assertNotIn("sources", res)   # 54개 중에서 고른 id는 검증할 수 없어 표시하지 않음
+            self.assertNotIn("sources", res)   # 전체 중에서 고른 id는 검증할 수 없어 표시하지 않음
             self.assertIn(type(err).__name__, logs.output[0])
 
     def test_not_searchable_uses_all_knowledge_without_embedding(self):
@@ -335,14 +345,31 @@ class KnowledgeFileTest(unittest.TestCase):
         data.update(over)
         rag.EMBEDDINGS_PATH.write_text(json.dumps(data), encoding="utf-8")
 
-    def test_faq_has_54_unique_items_with_fields(self):
-        self.assertEqual(len(self.items), 54)
-        self.assertEqual(len({x["id"] for x in self.items}), 54)
+    def test_faq_has_55_unique_items_with_fields(self):
+        self.assertEqual(len(self.items), 55)
+        self.assertEqual(len({x["id"] for x in self.items}), 55)
         for x in self.items:
-            self.assertEqual(set(x), {"id", "category", "question", "answer", "source"})
-            self.assertTrue(all(x[k].strip() for k in x))
-        f18 = next(x for x in self.items if x["id"] == "F18")
-        self.assertIn("사무용품, 출장(항공·숙박), 거래처 접대", f18["answer"])
+            self.assertLessEqual({"id", "category", "question", "answer", "source"}, set(x))
+            self.assertLessEqual(set(x), {"id", "category", "question", "alt_questions", "answer", "source"})
+            self.assertTrue(all(x[k].strip() for k in ("id", "category", "question", "answer", "source")))
+            alts = x.get("alt_questions", [])
+            self.assertTrue(isinstance(alts, list) and all(isinstance(a, str) and a.strip() for a in alts), x["id"])
+        by_id = {x["id"]: x for x in self.items}
+        self.assertIn("사무용품, 출장(항공·숙박), 거래처 접대", by_id["F18"]["answer"])
+        self.assertIn("유흥주점은 제한 업종", by_id["N27"]["answer"])
+        self.assertIn("한 달에 얼마 내야 해요", by_id["F7"]["alt_questions"])
+
+    def test_embed_text_includes_alt_questions(self):
+        f7 = next(x for x in self.items if x["id"] == "F7")
+        text = rag.embed_text(f7)
+        self.assertTrue(text.startswith("[가격] 월 이용료는 얼마예요? / 한 달에 얼마 내야 해요"))
+        self.assertTrue(text.endswith(f7["answer"]))
+        f1 = next(x for x in self.items if x["id"] == "F1")   # 비슷한 표현 없는 항목
+        self.assertEqual(rag.embed_text(f1), f"[서비스] {f1['question']}\n{f1['answer']}")
+
+    def test_hash_ignores_crlf(self):
+        raw = rag.FAQ_PATH.read_bytes().replace(b"\r\n", b"\n")
+        self.assertEqual(rag.faq_hash(raw), rag.faq_hash(raw.replace(b"\n", b"\r\n")))
 
     def test_valid_file_is_searchable(self):
         self.write()
@@ -352,7 +379,7 @@ class KnowledgeFileTest(unittest.TestCase):
         with self.assertLogs("uvicorn.error", "WARNING"):
             kn = rag.load_knowledge()
         self.assertFalse(kn.searchable)
-        self.assertEqual(len(kn.items), 54)
+        self.assertEqual(len(kn.items), len(self.items))
 
     def test_hash_or_model_mismatch_falls_back_with_warning(self):
         for over in ({"faq_hash": "0" * 64}, {"model": "text-embedding-ada-002"}):
