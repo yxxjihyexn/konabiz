@@ -128,6 +128,15 @@
           '<h2 id="alert-title" class="panel__title">최근 결제 알림</h2>' +
           '<ul class="pay-list">' + alerts + '</ul>' +
         '</section>' +
-      '</div>';
+      '</div>' +
+      /* AI 정책 점검 — 맨 아래 전체 폭, 판별기는 최대 640 (Sandbox에서도 실제 API) */
+      '<section class="panel ai-check" aria-labelledby="ai-check-title">' +
+        '<div class="panel__head"><div class="panel__title-row"><h2 id="ai-check-title" class="panel__title">AI 정책 점검</h2>' +
+        '<span class="badge-status badge-status--ai" aria-hidden="true">AI</span></div>' +
+        '<p class="panel__desc">새 가맹점이 어떤 포인트로 처리되는지, 제한 업종인지 미리 확인해보세요.</p></div>' +
+        '<div data-classifier></div>' +
+      '</section>';
+
+    if (window.KonaClassifier) window.KonaClassifier.mount(document.querySelector('.ai-check [data-classifier]'));
   }
 })();

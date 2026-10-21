@@ -1007,6 +1007,82 @@ a.sidebar__link:hover { background: var(--neutral-canvas); }
 /* AI 기능 표시 — 상태 배지와 겹치지 않게 어두운 배경 + Cyan400 (대비 약 10.6:1) */
 .badge-status--ai { min-width: 0; background: var(--neutral-inverted); color: var(--cyan-400); }
 
+/* 결과 박스 result-box — 결과 자리를 처음부터 잡아둠 (시뮬레이터 · AI 판별기) */
+.result-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-radius: var(--radius-8);
+  background: var(--neutral-wash);
+  color: var(--text-secondary-light);
+}
+.result-box__idle { text-align: center; }
+
+/* AI 가맹점 판별기 classifier (js/classifier.js) — 결과 배경은 level별
+   high · low: 흰 바탕 + 0.5 테두리 (승인 초록으로 보이지 않게 — '예상'일 뿐)
+   warn: 흰 바탕 + Ink 1px 테두리 + Ink 느낌표 (Danger 채움인 차단과 구분)
+   block: 기존 차단과 같은 Danger-tint · 실패: Wash (빨강 안 씀) */
+.classifier { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* 기획서 6.6 Fill — 입력 묶음 · 칩 묶음(칩은 왼쪽부터 줄바꿈) · 결과 상자 · 안내 문구, 결과 상자 안 줄도 모두 판별기 폭.
+   결과 상자는 처음 상태 · 결과 상태 모두 같은 폭 */
+.classifier > *,
+.classifier .chip-group > *,
+.classifier__result > * { width: 100%; min-width: 0; }
+/* 입력 묶음 폭 기준(container) — 대시보드 2열처럼 판별기는 넓어도 입력 묶음만 좁은 경우까지 */
+.classifier__form { container-type: inline-size; }
+.classifier__row { display: flex; gap: 8px; }
+.classifier__control { flex: 1 1 auto; min-width: 0; }
+.classifier__submit { flex-shrink: 0; }
+/* 입력 묶음 폭이 좁으면(모바일 · 1024 마이페이지 오른쪽 열 · 1024 대시보드 왼쪽 열) 버튼 옆에서 placeholder가 잘려서 세로로 쌓음.
+   container query를 못 쓰는 브라우저는 화면 폭(479 이하)으로 같은 처리 */
+@container (max-width: 400px) {
+  .classifier__row { flex-direction: column; }
+  .classifier__control,
+  .classifier__submit { flex: none; width: 100%; }
+}
+@supports not (container-type: inline-size) {
+  @media (max-width: 479px) {
+    .classifier__row { flex-direction: column; }
+    .classifier__control,
+    .classifier__submit { flex: none; width: 100%; }
+  }
+}
+/* 처음 안내 · 결과 모두 상자 안에서 세로 가운데 (상자가 내용보다 높을 때 — 대시보드 2열) */
+.classifier__result { justify-content: center; gap: 8px; }
+.classifier__result.is-high,
+.classifier__result.is-low { background: var(--neutral-card); box-shadow: inset 0 0 0 0.5px var(--border-default); color: var(--text-primary-light); }
+.classifier__result.is-warn { background: var(--neutral-card); box-shadow: inset 0 0 0 1px var(--neutral-ink); color: var(--text-primary-light); }
+.classifier__result.is-block { background: var(--danger-tint); color: var(--text-on-danger-tint); }
+.classifier__method {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--text-secondary-light);
+}
+.classifier__result.is-block .classifier__method { color: inherit; }
+.classifier__headline { display: flex; align-items: flex-start; gap: 6px; font-weight: 600; }
+.classifier__result.is-fail .classifier__headline { font-weight: 400; }
+.classifier__icon { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
+.classifier__facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 14px; line-height: 22px; }
+.classifier__fact { display: flex; align-items: center; gap: 6px; }
+.classifier__fact dt { color: var(--text-secondary-light); }
+.classifier__result.is-block .classifier__fact dt { color: inherit; }
+.classifier__fact dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.classifier__fact .tag { font-weight: 400; }
+.classifier__hint { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+.classifier__note { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
+
+/* 패널 제목 옆 AI 배지 (마이페이지 · 대시보드 판별기) + 설명 */
+.panel__head { display: flex; flex-direction: column; gap: 4px; }
+.panel__title-row { display: flex; align-items: center; gap: 8px; }
+.panel__desc { color: var(--text-secondary-light); }
+
 /* 빈 상태 empty-state — 제목 H3 + 설명 (+ 단계 · 버튼), 가운데 정렬 */
 .empty-state {
   display: flex;

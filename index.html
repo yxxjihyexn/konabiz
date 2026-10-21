@@ -71,16 +71,8 @@
             </div>
             <h3 class="feature-card__title">AI 가맹점 판별</h3>
             <p class="feature-card__desc">가맹점 이름만 넣으면 업종을 판별해 어떤 포인트로 결제될지, 막힐지 알려줘요.</p>
-            <figure class="ai-example">
-              <figcaption class="ai-example__label">예시</figcaption>
-              <p class="ai-predict">
-                <span class="tag">스타벅스 강남점</span>
-                <span class="ai-predict__arrow" aria-hidden="true">→</span><span class="visually-hidden">판별 결과</span>
-                <span class="badge-status badge-status--active">식대P</span>
-                <span class="ai-predict__score">확신도 96%</span>
-              </p>
-            </figure>
-            <p class="ai-card__basis">서울 상가 55만 곳 데이터로 학습한 머신러닝 모델</p>
+            <div data-classifier-landing></div>
+            <p class="ai-card__basis">서울 상가 55만 곳 데이터로 학습 · 평가 정확도 83%</p>
           </li>
           <li class="feature-card ai-card">
             <div class="ai-card__labels">
@@ -721,6 +713,7 @@
   <script src="js/common.js"></script>
   <script src="js/chat-reply.js"></script>
   <script src="js/chatbot.js"></script>
+  <script src="js/classifier.js"></script>
   <script src="js/landing.js"></script>
 </body>
 </html>

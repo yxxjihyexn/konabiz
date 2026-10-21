@@ -22,8 +22,8 @@ NOW = datetime(2026, 10, 1, tzinfo=timezone.utc)
 DEMO = [
     (10, "김밥천국", "meal", 7500, None),
     (16, "스타벅스 강남점", "meal", 4500, None),
-    (13, "교보문고", "welfare", 18000, None),
-    (15, "라운지바 강남", None, 30000, "유흥주점은 제한 업종이에요"),
+    (13, "올리브영 신촌점", "welfare", 18000, None),
+    (15, "블루문 유흥주점", None, 30000, "유흥주점은 제한 업종이에요"),
     (14, "애니타임피트니스", "fitness", 30000, None),
     (8, "한솥도시락", "meal", 18000, None),
     (12, "오피스디포", "expense", 12000, None),
@@ -96,6 +96,15 @@ class MeCardTest(unittest.TestCase):
                          ["2026-10-16", "2026-10-15", "2026-10-14", "2026-10-13", "2026-10-12", "2026-10-10", "2026-10-08"])
         self.assertTrue(txs[0]["paid_at"].endswith("+09:00"))
         self.assertEqual(txs[1]["blocked_reason"], "유흥주점은 제한 업종이에요")
+
+    def test_ai_classification_passthrough(self):
+        """seed가 저장한 ai를 그대로 내려줌. 없는 거래는 None"""
+        ai = {"category": "restricted", "confidence": 1.0, "industry": "유흥주점 키워드", "source": "rule", "level": "block"}
+        self.db.cards.update_one({"user_id": self.minjun, "transactions.merchant": "블루문 유흥주점"},
+                                 {"$set": {"transactions.$.ai": ai}})
+        txs = {t["merchant"]: t for t in self.card_for(self.minjun)["transactions"]}
+        self.assertEqual(txs["블루문 유흥주점"]["ai"], ai)
+        self.assertIsNone(txs["김밥천국"]["ai"])
 
     def test_only_own_card(self):
         r = self.card_for(self.new)

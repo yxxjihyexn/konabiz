@@ -28,10 +28,11 @@ def require_employee(user: dict = Depends(require_login)) -> dict:
 
 
 def _transaction(t: dict) -> dict:
+    # ai: seed 때 가맹점 판별 모델로 계산해 저장한 값 {category, confidence, industry, source, level} (없으면 None)
     return {
         "paid_at": t["paid_at"].astimezone(KST).isoformat(),
         "merchant": t["merchant"], "pocket": t.get("pocket"), "amount": t["amount"],
-        "status": t["status"], "blocked_reason": t.get("blocked_reason"),
+        "status": t["status"], "blocked_reason": t.get("blocked_reason"), "ai": t.get("ai"),
     }
 
 

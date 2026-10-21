@@ -954,4 +954,10 @@
     var chip = e.target.closest('[data-chat-ask]');
     if (chip && window.KonaChat) window.KonaChat.ask(chip.textContent);
   });
+
+  /* AI 가맹점 판별기 (카드 1) — 예시 칩은 누르면 바로 판별. 4개가 식대P · 체력단련P · 법인경비P · 결제 불가 */
+  var classifierEl = document.querySelector('[data-classifier-landing]');
+  if (classifierEl && window.KonaClassifier) {
+    window.KonaClassifier.mount(classifierEl, { chips: ['달빛우동 성수점', '애니타임피트니스', '새벽별문구', '블루문 유흥주점'] });
+  }
 })();

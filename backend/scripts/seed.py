@@ -14,6 +14,7 @@ from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
 from app.auth import hash_password
 from app.config import settings
+from app.ml_rules import judge, load_model
 from app.reservation_rules import next_weekdays, slot_at, slot_error
 from scripts import seed_data as D
 
@@ -70,14 +71,29 @@ def build_users():
     return admin, employees
 
 
-def build_demo_transactions():
+def build_demo_transactions(model=None):
+    """model이 있으면 거래마다 AI 분류(ai)를 저장 — 화면에서 실시간 호출하지 않음.
+    값은 js/mock-data.js(Sandbox)와 같아야 함 (같은 최종 모델로 계산)."""
     txs = []
     for (m, d), merchant, pocket, amount, blocked in D.DEMO_PAYMENTS:
-        txs.append({
+        t = {
             "paid_at": kst(m, d), "merchant": merchant, "pocket": pocket, "amount": amount,
             "status": "blocked" if blocked else "approved", "blocked_reason": blocked,
-        })
+        }
+        if model is not None:
+            t["ai"] = judge(model, merchant)
+        txs.append(t)
     return txs
+
+
+def ai_report(transactions):
+    """AI 분류 ↔ 실제 차감 포인트(차단은 restricted) 일치 표 — 출력만."""
+    rows = []
+    for t in transactions:
+        actual = t["pocket"] or "restricted"
+        ai = t.get("ai")
+        rows.append((t["merchant"], actual, ai and ai["category"], ai and ai["level"], ai is not None and ai["category"] == actual))
+    return rows
 
 
 def points_after(transactions):
@@ -89,13 +105,13 @@ def points_after(transactions):
     return {k: {"start": D.START_POINTS[k], "balance": bal[k]} for k in D.START_POINTS}
 
 
-def build_cards(user_ids_by_email):
+def build_cards(user_ids_by_email, model=None):
     seeded_at = kst(10, 16)
     cards = []
     for name, email, _dept, last4, status, _invited in D.MEMBERS:
         if name == D.DEMO_EMPLOYEE_NAME:
             email = D.DEMO_EMPLOYEE_EMAIL
-        txs = build_demo_transactions() if name == D.DEMO_EMPLOYEE_NAME else []
+        txs = build_demo_transactions(model) if name == D.DEMO_EMPLOYEE_NAME else []
         cards.append({
             "user_id": user_ids_by_email[email.lower()], "last4": last4,
             "status": D.CARD_STATUS[status], "points": points_after(txs),
@@ -181,7 +197,10 @@ def main():
         admin, employees = build_users()
         users = [admin] + employees
         ids = {u["email"]: u["_id"] for u in employees}
-        cards = build_cards(ids)
+        model = load_model()
+        if model is None:
+            print("가맹점 판별 모델 파일이 없어 거래 AI 분류(ai) 없이 넣습니다")
+        cards = build_cards(ids, model)
         check(users, cards)
         reservations = build_reservations(datetime.now(timezone.utc))
         chats = build_chats(ids[D.DEMO_EMPLOYEE_EMAIL])
@@ -203,6 +222,12 @@ def main():
             print(f"{name:<16}{db[name].count_documents({})}")
         print()
         print(f"로그인 가능(데모) 계정:{db.users.count_documents({'password_hash': {'$exists': True}})}개")
+        if model is not None:
+            demo = next(c for c in cards if c["transactions"])
+            print()
+            print("김민준 거래 AI 분류 (실제 포인트 / AI 분류 · level / 일치)")
+            for merchant, actual, cat, level, ok in ai_report(demo["transactions"]):
+                print(f"  {merchant:<12} {actual:<10} {cat} · {level}  {'O' if ok else 'X'}")
     finally:
         client.close()
 

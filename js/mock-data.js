@@ -37,19 +37,23 @@ window.KonaMock = (function () {
 
   /* 06 임직원 마이페이지 (김민준 · 개발팀 · 카드 끝 4821)
      시작 잔액 150,000 / 100,000 / 100,000 / 500,000 → 남은 잔액 120,000 / 70,000 / 82,000 / 488,000
-     합계(법인경비P 제외) 272,000. 차단 결제는 차감 없음 */
+     합계(법인경비P 제외) 272,000. 차단 결제는 차감 없음
+     ai = 가맹점 판별 최종 모델 결과 (seed가 DB에 넣는 값과 같음 — 모델을 다시 학습하면 같이 고침) */
+  function ai(category, confidence, industry, level, source) {
+    return { category: category, confidence: confidence, industry: industry, source: source || 'model', level: level };
+  }
   var employee = {
     user: { name: '김민준', meta: company + ' · 개발팀' },
     card: { last4: '4821', holder: '김민준' },
     start: { meal: 150000, fitness: 100000, welfare: 100000, expense: 500000 },
     payments: [
-      { date: '10/16', merchant: '스타벅스 강남점', pocket: 'meal', amount: 4500 },
-      { date: '10/15', merchant: '라운지바 강남', blocked: '유흥주점은 제한 업종이에요', amount: 30000 },
-      { date: '10/14', merchant: '애니타임피트니스', pocket: 'fitness', amount: 30000 },
-      { date: '10/13', merchant: '교보문고', pocket: 'welfare', amount: 18000 },
-      { date: '10/12', merchant: '오피스디포', pocket: 'expense', amount: 12000 },
-      { date: '10/10', merchant: '김밥천국', pocket: 'meal', amount: 7500 },
-      { date: '10/08', merchant: '한솥도시락', pocket: 'meal', amount: 18000 }
+      { date: '10/16', merchant: '스타벅스 강남점', pocket: 'meal', amount: 4500, ai: ai('meal', 0.6255, '카페·음료점', 'high') },
+      { date: '10/15', merchant: '블루문 유흥주점', blocked: '유흥주점은 제한 업종이에요', amount: 30000, ai: ai('restricted', 1.0, '유흥주점 키워드', 'block', 'rule') },
+      { date: '10/14', merchant: '애니타임피트니스', pocket: 'fitness', amount: 30000, ai: ai('fitness', 0.996, '체육시설', 'high') },
+      { date: '10/13', merchant: '올리브영 신촌점', pocket: 'welfare', amount: 18000, ai: ai('welfare', 0.8311, '생활용품 매장', 'high') },
+      { date: '10/12', merchant: '오피스디포', pocket: 'expense', amount: 12000, ai: ai('expense', 0.9961, '문구점', 'high') },
+      { date: '10/10', merchant: '김밥천국', pocket: 'meal', amount: 7500, ai: ai('meal', 0.9958, '분식·간편식', 'high') },
+      { date: '10/08', merchant: '한솥도시락', pocket: 'meal', amount: 18000, ai: ai('meal', 0.9975, '한식', 'high') }
     ]
   };
 

@@ -1,0 +1,38 @@
+{
+  "model": "char 1-3gram TF-IDF + LogisticRegression (근거 업종 → 코나비즈 분류 합산)",
+  "trained_at": "2026-10-21T02:18:34+00:00",
+  "python": "3.12.9",
+  "scikit_learn": "1.9.1",
+  "numpy": "2.5.4",
+  "joblib": "1.6.0",
+  "data": "소상공인시장진흥공단_상가(상권)정보_서울_202606.csv",
+  "train_names": 434387,
+  "units": 90,
+  "params": {
+    "max_features": 50000,
+    "C": 4.0,
+    "ngram_range": [
+      1,
+      3
+    ],
+    "sample_weight": "log1p(업소 수) 체인 가중치 × 분류 균형(분류별 합 동일)"
+  },
+  "eval_group_split": {
+    "accuracy": 0.834,
+    "macro_f1": 0.6466,
+    "f1_meal": 0.8036,
+    "f1_fitness": 0.9005,
+    "f1_welfare": 0.872,
+    "f1_expense": 0.4786,
+    "f1_restricted": 0.1785
+  },
+  "restricted_keywords": [
+    "유흥주점",
+    "단란주점",
+    "룸살롱",
+    "룸싸롱",
+    "가라오케",
+    "노래빠",
+    "나이트클럽"
+  ]
+}

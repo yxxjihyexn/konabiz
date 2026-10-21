@@ -95,7 +95,7 @@
 .card-list--solution > .feature-card { flex: 1 1 400px; }   /* Min 400 → 1200 안에서 2열 */
 
 /* ---------- 4-1. AI 기능 (Hero 다음) ----------
-   카드는 feature-card 그대로. 예시 영역은 Canvas 배경 + "예시" 캡션 — 클릭 대상 아님 */
+   카드는 feature-card 그대로. 카드 1 판별기는 style.css의 classifier */
 .ai-head { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .ai-eyebrow {
   display: flex;
@@ -108,21 +108,10 @@
 }
 
 .card-list--ai { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 기획서 6.6 — 카드 안 요소는 모두 카드 안쪽 폭을 채움 (Fill). 배지 줄·제목·설명·판별기·질문 칩 묶음·근거 한 줄 */
+.ai-card > *,
+.ai-card .chip-group > * { width: 100%; min-width: 0; }
 .ai-card__labels { display: flex; align-items: center; gap: 8px; }
-
-.ai-example {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding: 16px;
-  background: var(--neutral-canvas);
-  border-radius: var(--radius-8);
-}
-.ai-example__label { font-size: 12px; line-height: 18px; font-weight: 600; color: var(--text-secondary-light); }
-.ai-predict { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ai-predict__arrow { color: var(--text-secondary-light); }
-.ai-predict__score { font-size: 14px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* 근거 한 줄은 카드 맨 아래 — 두 카드 높이가 같아도 줄이 나란히 */
 .ai-card__basis { margin-top: auto; font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
@@ -332,19 +321,7 @@
 .amount__label { font-weight: 600; }
 .amount__value { font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* 결과 박스 result-box — 결과 자리를 처음부터 잡아둠 */
-.result-box {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  min-height: 72px;
-  padding: 12px 16px;
-  border-radius: var(--radius-8);
-  background: var(--neutral-wash);
-  color: var(--text-secondary-light);
-}
-.result-box__idle { text-align: center; }
+/* 결과 박스 result-box 기본은 style.css (AI 판별기와 같이 씀) */
 .result-box__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
 .result-box__status { display: flex; align-items: center; gap: 4px; }
 .result-box__status img { width: 20px; height: 20px; }

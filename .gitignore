@@ -7,6 +7,9 @@ __pycache__/
 .env
 !.env.example
 
+# ML 원본·가공 데이터 — 공공데이터 원본(수백 MB)은 커밋하지 않음
+backend/ml/data/
+
 # 로컬 전용
 포트폴리오 사용할것/
 .claude/settings.local.json

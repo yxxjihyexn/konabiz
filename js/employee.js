@@ -41,14 +41,22 @@
       payments: r.transactions.map(function (t) {
         return {
           date: t.paid_at.slice(5, 10).replace('-', '/'), merchant: t.merchant, pocket: t.pocket, amount: t.amount,
-          blocked: t.status === 'blocked' ? (t.blocked_reason || '결제가 차단됐어요') : null
+          blocked: t.status === 'blocked' ? (t.blocked_reason || '결제가 차단됐어요') : null,
+          ai: t.ai || null
         };
       })
     };
   }
 
+  /* AI 판별기 — 결과에 그 포인트의 남은 금액 (불러오기 전·실패면 표시 안 함). Sandbox도 실제 API */
+  var current = null;
+  KonaClassifier.mount(document.querySelector('[data-classifier]'), {
+    balances: function () { return current && current.balances; }
+  });
+
   /* view: 'loading' | 'error' | 화면 모양. onRetry는 실패 화면의 [다시 시도] */
   function render(view, onRetry) {
+    current = typeof view === 'object' ? view : null;
     renderCard(view);
     renderPoints(view, onRetry);
     renderHistory(view, onRetry);
@@ -115,13 +123,21 @@
   }
 
   /* ---------- 최근 결제내역 (최신순) ---------- */
+  /* AI 분류 줄 — seed 때 모델로 계산해 저장한 값 (없으면 줄 없음). 규칙 판정은 "제한 업종 규칙" */
+  function aiLine(ai) {
+    if (!ai) return '';
+    var text = ai.source === 'rule' ? '제한 업종 규칙' : 'AI 분류 · ' + A.esc(ai.industry) + (ai.level === 'low' ? ' · 확실하지 않음' : '');
+    return '<p class="pay-row__ai"><span class="badge-status badge-status--ai badge-status--xs" aria-hidden="true">AI</span>' +
+      '<span>' + (ai.source === 'rule' ? '<span class="visually-hidden">AI </span>' : '') + text + '</span></p>';
+  }
+
   function payRow(p) {
     var blocked = !!p.blocked;
     return '<li class="pay-row' + (blocked ? ' is-blocked' : '') + '">' +
       '<img class="pay-row__icon" src="assets/' + (blocked ? 'icon-stop.svg' : 'icon-check-green.svg') + '" alt="' + (blocked ? '차단' : '승인') + '" width="20" height="20">' +
       '<div class="pay-row__text"><p class="pay-row__title">' + A.esc(p.merchant) + '</p>' +
       '<p class="pay-row__meta">' + p.date + ' · ' + (blocked ? '차단' : KonaMock.POCKET_NAME[p.pocket]) + '</p>' +
-      (blocked ? '<p class="pay-row__reason">' + A.esc(p.blocked) + '</p>' : '') + '</div>' +
+      (blocked ? '<p class="pay-row__reason">' + A.esc(p.blocked) + '</p>' : '') + aiLine(p.ai) + '</div>' +
       '<p class="pay-row__amount">' + A.won(p.amount) + '</p></li>';
   }
 

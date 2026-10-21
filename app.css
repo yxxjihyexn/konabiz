@@ -19,6 +19,16 @@
 .pay-row__title { font-weight: 600; }
 .pay-row__meta { font-size: 12px; line-height: 18px; color: var(--text-secondary-light); }
 .pay-row__reason { font-size: 12px; line-height: 18px; color: var(--danger); }
+/* AI 분류 줄 — Caption, 배지는 줄 높이(18)에 맞춘 작은 AI 배지 */
+.pay-row__ai {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary-light);
+}
+.badge-status--xs { padding: 0 6px; font-size: 11px; line-height: 18px; border-radius: var(--radius-4); }
 .pay-row__amount { flex-shrink: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pay-row.is-blocked .pay-row__amount { color: var(--text-secondary-light); }   /* 차단 금액은 흐리게(차감 없음) */
 
@@ -97,7 +107,24 @@
    ========================================================= */
 .mypage { display: flex; gap: 24px; align-items: flex-start; }
 .mypage__left { flex: 0 0 400px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
-.mypage__right { flex: 1 1 auto; min-width: 0; }
+.mypage__right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+
+/* 대시보드 AI 정책 점검 — 바로 위 줄(dash-bottom: 카테고리 / 최근 결제 알림 438)과 같은 열 구성
+   1024 이상(dash-bottom이 2열인 폭): 제목·설명은 전체 폭, 그 아래 왼쪽 = 나머지 폭(입력 묶음 + 안내 문구),
+   오른쪽 = 414(알림 패널 438 − 이 패널 안쪽 여백 24 → 결과 상자 왼쪽 선이 알림 패널 왼쪽 선과 맞음), 간격 24.
+   결과 상자는 두 줄 높이를 채우고 내용은 세로 가운데. 1023 이하는 dash-bottom처럼 세로 쌓기 */
+@media (min-width: 1024px) {
+  .ai-check .classifier {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 414px;
+    grid-template-rows: auto 1fr;
+    column-gap: 24px;
+    row-gap: 12px;
+  }
+  .ai-check .classifier__form { grid-column: 1; grid-row: 1; }
+  .ai-check .classifier__note { grid-column: 1; grid-row: 2; align-self: start; }
+  .ai-check .classifier__result { grid-column: 2; grid-row: 1 / 3; }
+}
 .card-area { display: flex; flex-direction: column; gap: 8px; }
 
 /* 법인카드 corp-card — 400 × 252 (실제 카드 비율), Ink, r16, 패딩 24 */

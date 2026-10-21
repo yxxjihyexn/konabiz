@@ -127,7 +127,7 @@ python -m scripts.seed
 
 | API | 설명 |
 |---|---|
-| `GET /api/me/card` | 본인 카드 `{last4, status, holder, points: {meal·fitness·welfare·expense: {start, balance}}, summary: {remaining, expense}, transactions: [{paid_at, merchant, pocket, amount, status, blocked_reason}]}`. 카드가 없으면 404 |
+| `GET /api/me/card` | 본인 카드 `{last4, status, holder, points: {meal·fitness·welfare·expense: {start, balance}}, summary: {remaining, expense}, transactions: [{paid_at, merchant, pocket, amount, status, blocked_reason, ai}]}`. 카드가 없으면 404 |
 
 - `summary.remaining` = 식대·체력단련·복지 3종 잔액 합계. 법인경비P(`expense`)는 별도 예산이라 합계에 넣지 않고 따로 표시합니다.
 - 거래는 최신순, `paid_at`은 KST(`+09:00`) ISO 문자열. 차단 거래(`status: "blocked"`)는 잔액에서 빠지지 않습니다. 화면은 처음 5건, [더 보기]마다 10건씩.
@@ -136,6 +136,7 @@ python -m scripts.seed
 - 새로 초대한 직원은 시작 잔액 그대로(사용 0원)·거래 0건으로 보입니다.
 - `?sandbox=1`과 `?state=` 미리보기(suspended·issuing·no-payments·loading·error)는 이 API를 부르지 않고 `js/mock-data.js`의 김민준 예시값으로 보여줍니다.
 - 결제·포인트 충전·이동·거래 생성 API는 없습니다(거래는 seed 데이터만).
+- `ai`: 가맹점 판별 모델 결과 `{category, confidence, industry, source, level}` — seed 때 계산해 거래 문서에 저장한 값(화면에서 실시간 호출하지 않음). 결제 행에 "AI 분류 · 카페·음료점"처럼 표시, 모델 파일 없이 seed했으면 `null`이고 그 줄이 빠집니다. Sandbox는 `js/mock-data.js`에 같은 값.
 
 ### 챗봇 API (OpenAI + 규칙 답변 하이브리드 + 지식 검색 RAG)
 
@@ -216,6 +217,90 @@ python -m scripts.build_knowledge   # faq.json → faq_embeddings.json (OpenAI �
 - DB가 없으면 답변만 하고 저장·맥락은 건너뜁니다. 테스트로 쌓인 대화는 `python -m scripts.seed`로 지워집니다.
 - 로그인 사용자의 포인트·거래를 챗봇이 조회해 답하는 기능은 없습니다.
 
+### 가맹점 판별 ML (상호명 → 코나비즈 포인트)
+
+상호명만 보고 어떤 포인트로 결제될지(또는 제한 업종인지) 미리 알려주는 머신러닝 모델. 랜딩 AI 카드 · 임직원 마이페이지 "결제 전에 확인하기" · 관리자 대시보드 "AI 정책 점검"의 판별기와 결제내역 AI 분류에 씁니다. 결제 시뮬레이터와 챗봇은 이 모델을 쓰지 않습니다.
+
+| API | 설명 |
+|---|---|
+| `POST /api/ml/classify` | `{name}` → `{category, confidence, industry, source, level}` |
+
+- 로그인 없이 씀 (Sandbox도 실제 API — 데이터를 바꾸지 않음). 앞뒤 공백 제거 후 빈 값 422 "가맹점 이름을 입력해주세요.", 50자 초과 422 "가맹점 이름은 50자까지 입력할 수 있어요."
+- 같은 IP 1분 30회 → 429 "잠시 후 다시 판별해주세요." (챗봇과 같은 메모리 방식)
+- 모델은 서버 시작 시 한 번만 불러옴(약 0.6초). 모델 파일이 없으면 서버는 그대로 켜지고 이 API만 503 → 화면 "지금은 판별할 수 없어요. 잠시 후 다시 시도해주세요."
+- `category`: meal · fitness · welfare · expense · restricted, `source`: `rule`(키워드 규칙) | `model`, `industry`: 근거 업종(표시 이름)
+
+**화면 정책 (level — 서버가 `app/ml_rules.py`의 기준값으로 계산, 화면은 level만 보고 그림)**
+
+| level | 조건 | 화면 |
+|---|---|---|
+| `block` | 키워드 규칙(유흥주점·단란주점·룸살롱·룸싸롱·가라오케·노래빠·나이트클럽, 공백 무시) | "결제할 수 없어요 · 제한 업종" (기존 차단 스타일) |
+| `warn` | 모델 restricted, 확신도 ≥ 0.9 (`WARN`) | "제한 업종일 수 있어요" — 차단으로 단정하지 않음 |
+| `high` | 확신도 ≥ 0.6 (`HIGH`), 법인경비P만 ≥ 0.7 (`EXPENSE_HIGH`) | "○○P로 결제될 것 같아요" + 확신도 + 근거 업종 |
+| `low` | 그 밖 (restricted < 0.9 포함) | 예상은 보여주되 "이름만으로는 확실하지 않아요" |
+
+- 실제 결제는 가맹점에 등록된 업종으로 처리되고 AI는 미리 알려주는 역할이라, 문구는 "결제될 것 같아요"로 씁니다. 화면 확신도는 최대 99%로 표시.
+- 모델의 restricted 판정만으로 차단하지 않는 이유: 확신도 0.9 이상에서도 precision 0.351(288건 중 101건) — 노래방·주점을 유흥주점으로 보는 경우가 많음.
+
+**데이터** — 공공데이터포털 15083033 소상공인시장진흥공단 상가(상권)정보 **서울 2026-06** (554,092행, UTF-8). `backend/ml/data/`에 두고 커밋하지 않습니다(`.gitignore`, 원본은 읽기만).
+
+**변환 규칙** — `backend/ml/category_map.py` (표: `category_map.csv`, `python backend/ml/category_map.py`로 다시 만듦). 업종 소분류 247개 → 근거 업종 90개 → 코나비즈 5분류
+
+| 분류 | 업종 (업소 수) |
+|---|---|
+| meal 식대P | 음식점·카페(주점 제외) · 학원(입시·예체능·외국어 등) · 서점 (162,363) |
+| fitness 체력단련P | 스포츠 서비스(당구장 제외) · 요가/필라테스·태권도/무술·레크리에이션 학원 · 의원·병원 · 약국 (38,890) |
+| expense 법인경비P | 호텔·모텔(펜션 제외) · 여행사 · 렌터카 · 주유소·가스충전소 · 문구 · 사무기기 · 복사 (13,022) |
+| restricted 제한 | 일반 유흥 주점 · 무도 유흥 주점 (2,484) |
+| welfare 복지P | 그 밖의 모든 업종 — 요리 주점·생맥주(일반 주점), 펜션, 당구장, 안마·사우나, 노래방, 전문·사업 서비스 포함 (337,333) |
+
+**모델** — `backend/ml/train.ipynb` (EDA · 비교 · 평가 · 틀린 사례 · 데모), 공통 코드 `backend/app/ml_rules.py`(정규화·규칙·예측)
+- 상호명 정규화(소문자·법인 표기·괄호·공백·특수문자 제거) → 이름 단위로 합침(체인점 한 표, 다수 분류 60% 미만 이름 제외) → 434,387개
+- 글자 1~3-gram TF-IDF(특징 5만) + 로지스틱 회귀. **근거 업종 90개를 예측**하고 확률을 분류별로 더해 확신도로 씀 → 근거 업종을 함께 설명
+- 샘플 가중치 = `log(1+업소 수)`(체인 가중치) × 분류 균형 (welfare : restricted = 227 : 1)
+- 평가는 **그룹 분할**(정규화 이름 앞 3글자 — 같은 브랜드가 학습·평가에 나뉘지 않게) 80/20
+- 저장: `backend/ml/models/merchant_classifier.joblib` (16.9MB, 커밋) + `model_meta.json`(scikit-learn 1.9.1 등 버전·성능). 불러올 때 학습 때와 같은 scikit-learn 버전이어야 함 (`requirements.txt` 고정)
+
+**성능** (평가 86,878개, 모델만 — 규칙 제외)
+
+| 모델 | 정확도 | macro F1 |
+|---|---|---|
+| **업종 합산 + LR (사용)** | **0.834** | **0.647** |
+| 5분류 직접 + LR | 0.820 | 0.631 |
+| 업종 합산 + ComplementNB | 0.697 | 0.523 |
+| welfare 6만 추출 | 0.816 | 0.627 |
+| (참고) 무작위 분할 — 브랜드 누수 | 0.841 | 0.652 |
+
+| 분류 | precision | recall | F1 |
+|---|---|---|---|
+| meal | 0.799 | 0.808 | 0.804 |
+| fitness | 0.880 | 0.922 | 0.901 |
+| welfare | 0.903 | 0.843 | 0.872 |
+| expense | 0.368 | 0.683 | 0.479 |
+| restricted | 0.106 | 0.567 | 0.178 |
+
+- 확신도 0.6 이상이 73.4%, 그 안 정확도 0.915 (미만 0.611)
+- 키워드 규칙만: precision 0.667 · recall 0.129 (업태가 이름에 드러난 경우만 확실히 막는 용도)
+
+**한계**
+- 이름만 봄 — 이름에 업종 단어가 있어도 실제 업종이 다르면 틀림(달커피숖 → 실제 주점), 업종 단서가 없는 브랜드형 이름(몽트레·롬25)은 확신도가 낮게 나옴
+- 유흥주점 이름 대부분은 업태 단서가 없어("헤븐"·"동경") 모델이 잘 못 찾고, 노래방·주점을 유흥주점으로 보기도 함 → 모델 판정으로 차단하지 않음
+- expense를 많이 예측(precision 0.37) — "투어·렌트·호텔·문구" 단어에 끌림
+- 공공데이터 업종이 실제와 다른 이름이 있어(내과의원이 식료품 소매로 등록 등) 평가 점수가 실제보다 낮게 나옴
+- 서울 2026-06 데이터만. 유명 체인도 이름 하나만 넣으면 확신도가 낮을 수 있음(스타벅스 0.54 → low)
+
+**재학습** (`backend` 폴더, 원본 CSV를 `backend/ml/data/`에 둔 뒤)
+
+```powershell
+pip install -r requirements-dev.txt
+python ml/category_map.py                      # 변환표 CSV (변환 규칙을 고쳤으면)
+jupyter nbconvert --to notebook --execute --inplace ml/train.ipynb   # 약 45분 — 모델 5개 비교 + 최종 모델 저장
+python -m scripts.seed                         # 결제내역 ai 다시 계산
+```
+
+- 다시 학습하면 `js/mock-data.js`의 김민준 거래 `ai` 값(Sandbox)과 랜딩 카드의 "평가 정확도"를 새 결과로 고치고, 서버를 재시작합니다.
+- 기준값(0.6 · 0.7 · 0.9)과 근거 업종 표시 이름은 `app/ml_rules.py` 한 곳.
+
 ### 테스트
 
 `backend` 폴더에서 (DB·OpenAI에 붙지 않음 — 메모리 DB `mongomock`, OpenAI는 가짜 응답):
@@ -227,5 +312,6 @@ python -m unittest discover -s tests -t . -v
 
 - `test_reservations.py`: 예약 시간 규칙·입력 검사 (법인경비P 업종 거래처 접대 `entertain` 포함)
 - `test_members.py`: 상태 전이 전체, 409(이미 바뀐 상태·중복 이메일·회수된 이메일), 404(다른 회사·관리자·없는 id), 임직원 계정 403, 임시 비밀번호 1회 노출·재발급 후 이전 비밀번호 실패, 첫 로그인 시 카드 사용 중, 대시보드 숫자
-- `test_me.py`: 본인 카드만 조회(새 직원에게 김민준 데이터 없음), 김민준 잔액·거래 7건(차단 1), 합계에서 법인경비P 제외, 최신순·KST, 거래 0건, 민감 정보 없음, 관리자 403, 비로그인 401, 카드 없음 404
+- `test_me.py`: 본인 카드만 조회(새 직원에게 김민준 데이터 없음), 김민준 잔액·거래 7건(차단 1), 합계에서 법인경비P 제외, 최신순·KST, 거래 AI 분류(ai) 그대로 · 없으면 null, 거래 0건, 민감 정보 없음, 관리자 403, 비로그인 401, 카드 없음 404
+- `test_ml.py`: level 기준(규칙 block · 모델 restricted는 warn/low만 · 0.6 · 법인경비 0.7), 키워드 규칙(공백·법인 표기 무시), 빈 값·공백·숫자 422, 51자 422 · 공백 빼고 50자 통과, 모델 없음·예측 오류 503, 근거 업종 표시 이름, IP 1분 30회 429, 실제 모델(응답 형식 · 랜딩 예시 칩 4개 결과 — 모델 파일 없으면 건너뜀)
 - `test_chat.py`: 빠른 답변(OpenAI·임베딩 0회), AI 답변·맥락 6개, RAG(상위 5개만 프롬프트에, 기준값 미만 → 관련 지식 없음, 키워드 일치, used_ids 검증 · 목록 밖 id 제거, sources 응답·저장, 이어지는 질문, 임베딩 실패·검색 불가 → 지식 전체 · sources 없음), 지식 파일(55개 · alt_questions 형식 · F18 거래처 접대 · N27, 임베딩 문장에 다른 표현 포함, CRLF여도 같은 해시, 파일 없음·해시·모델 불일치 경고), "~이어요" 고침, 프롬프트 끝 확인 목록, 개인정보 가림, cta 검사, 타임아웃·연결 실패 대체 답변, 키 없음, 빈 값·500자, 429(uid·IP·시간 지나면 풀림), 비로그인 anon_id·로그인 user id 저장, 남의 대화 읽기·쓰기 안 됨, DB 없이 답변
