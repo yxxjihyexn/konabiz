@@ -125,6 +125,13 @@ window.KonaChat = (function () {
       bubble.appendChild(b);
     }
     wrap.appendChild(bubble);
+    /* 참고한 안내 — AI 답변이 근거로 쓴 지식의 카테고리 (빠른 답변·대체 답변은 없음) */
+    if (Array.isArray(m.sources) && m.sources.length) {
+      var src = document.createElement('p');
+      src.className = 'chat-sources';
+      src.textContent = '참고한 안내: ' + m.sources.join(' · ');
+      wrap.appendChild(src);
+    }
     return wrap;
   }
 
@@ -256,6 +263,7 @@ window.KonaChat = (function () {
         if (mine !== token) return;
         var a = { id: newId(), from: 'bot', text: res.text };
         if (res.cta) a.cta = res.cta;
+        if (res.sources) a.sources = res.sources;
         state.messages.push(a);
         state.pending = null;
         if (panel.hidden) state.unread = true;   /* 기다리는 중에 닫았으면 FAB 빨간 점 */

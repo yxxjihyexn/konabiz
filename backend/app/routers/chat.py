@@ -2,7 +2,12 @@
 
 - 로그인 없이 씀. uid = 로그인했으면 users._id 문자열, 아니면 anon_id (localStorage 임시 ID)
 - 빠른 답변(quick_reply_id)은 chat_rules.ANSWERS 그대로 — OpenAI 호출 없음
-- 직접 입력: 시스템 프롬프트(승인된 FAQ) + 같은 대화의 최근 6개 메시지 → {text, cta} 구조화 응답을 서버에서 다시 검증
+- 직접 입력: 질문을 임베딩해 관련 지식 상위 5개만 찾음(app/rag.py) → 시스템 프롬프트(규칙 + 그 5개) + 같은 대화의
+  최근 6개 메시지 → {text, cta, used_ids} 구조화 응답을 서버에서 다시 검증 → {text, cta, sources}
+  · 1위 유사도가 rag.THRESHOLD 미만이고 키워드 일치도 없으면 [참고 지식: 관련 지식 없음]으로 호출 (규칙대로 상담·범위 안내, sources 없음)
+  · 임베딩 파일 없음·해시 불일치·임베딩 API 실패 → 검색 없이 지식 전체를 넣음 (화면 오류 없음, sources 없음 —
+    54개 중 비슷한 id(F24·N24)를 잘못 고르는 경우가 있어 검증할 수 없음)
+  · used_ids는 검색해서 프롬프트에 넣은 항목 안에 있는 것만 sources로 (빠른 답변·대체 답변은 sources 없음)
   OpenAI에는 사용자 이름·이메일을 보내지 않고, 질문 안의 이메일·전화번호·카드번호 형태는 가려서 보냄
 - OpenAI 실패·타임아웃·키 없음 → chat_rules.FALLBACK (오류 문구로 끝내지 않음). 로그에는 오류 종류만
 - 사용량 제한: 같은 uid 1분 10회 · 같은 IP 1분 30회 → 429 (서버 메모리 기준, 재시작하면 초기화)
@@ -26,6 +31,7 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app import auth
 from app import chat_rules as CR
+from app import rag
 from app.config import settings
 from app.db import get_db
 
@@ -44,6 +50,7 @@ HISTORY = 6                # OpenAI에 보내는 같은 대화의 최근 메시�
 MAX_TOKENS = 300
 ANSWER_MAX = 600           # 서버 검증 — 이보다 길면 자름
 TIMEOUT = 15               # 초. chatbot.js TIMEOUT(20초)보다 짧게
+EMBED_TIMEOUT = 5          # 초. 질문 임베딩 — 넘으면 지식 전체로 답함
 
 RATE_WINDOW = 60           # 초
 RATE_UID = 10              # 같은 uid가 RATE_WINDOW 안에 보낼 수 있는 수
@@ -87,6 +94,7 @@ class ChatAnswer(BaseModel):
     """OpenAI 구조화 응답 형식."""
     text: str
     cta: Literal["booking", "simulator", "none"]
+    used_ids: list[str]
 
 
 _client: openai.OpenAI | None = None
@@ -117,6 +125,43 @@ def call_openai(messages: list[dict]) -> ChatAnswer | None:
     return None if msg.refusal else msg.parsed
 
 
+def call_embedding(texts: list[str]) -> list[list[float]]:
+    """질문 임베딩 한 번 호출 (여러 문장을 한 번에). (테스트에서 이 함수를 가짜로 바꿈)"""
+    log.info("챗봇: 임베딩 호출")
+    res = _openai_client().with_options(timeout=EMBED_TIMEOUT).embeddings.create(model=rag.EMBED_MODEL, input=texts)
+    return [d.embedding for d in sorted(res.data, key=lambda d: d.index)]
+
+
+# 서버 시작 시 한 번 불러옴 (faq.json + faq_embeddings.json)
+knowledge = rag.load_knowledge()
+
+
+def retrieve(question: str, history: list[dict]) -> tuple[list[dict], bool]:
+    """([참고 지식]에 넣을 항목, 검색했는지) — 상위 5개 · 1위 유사도가 기준값 미만이고 키워드 일치도 없으면 []
+    · 검색할 수 없으면 전체(검색 안 함).
+    직전 사용자 질문이 있으면 '직전 질문 + 이번 질문'도 같이 임베딩해서 더 높은 점수를 씀 ("그건 얼마예요?" 같은 이어지는 질문)."""
+    if not knowledge.searchable:
+        return knowledge.items, False
+    texts = [question]
+    prev = next((m.get("text") for m in reversed(history) if m.get("from") == "user"), None)
+    if isinstance(prev, str) and prev.strip():
+        texts.append(mask_personal(prev) + "\n" + question)
+    try:
+        vecs = call_embedding(texts)
+        if len(vecs) != len(texts):
+            raise ValueError("embedding count")
+        hits = knowledge.keyword_ids(question)
+        top = knowledge.search(vecs, hits)
+    except Exception as e:
+        log.warning("챗봇: 임베딩 실패 (%s) — 지식 전체로 답함", type(e).__name__)
+        return knowledge.items, False
+    best = max((score for score, _ in top), default=0.0)
+    log.info("챗봇: 검색 %s · 키워드 %s", " ".join(f"{x['id']}={score:.3f}" for score, x in top), sorted(hits) or "-")
+    if best < rag.THRESHOLD and not hits:
+        return [], True
+    return [x for _, x in top], True
+
+
 EMAIL_RE = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 CARD_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
 PHONE_RE = re.compile(r"\b0\d{1,2}[ -]?\d{3,4}[ -]?\d{4}\b")
@@ -129,8 +174,9 @@ def mask_personal(text: str) -> str:
     return PHONE_RE.sub("[전화번호]", text)
 
 
-def clean_answer(raw) -> dict | None:
-    """구조화 응답 검증 — text가 비면 None, cta가 목록 밖이면 none."""
+def clean_answer(raw, allowed: list[dict] | None = None) -> dict | None:
+    """구조화 응답 검증 — text가 비면 None, cta가 목록 밖이면 none,
+    used_ids는 프롬프트에 넣은 항목(allowed) 안의 id만 sources로 (순서 유지, 중복 제거)."""
     text = getattr(raw, "text", None) if raw is not None else None
     if not isinstance(text, str) or not text.strip():
         return None
@@ -140,20 +186,31 @@ def clean_answer(raw) -> dict | None:
     cta = getattr(raw, "cta", None)
     if cta not in CR.CTAS:
         cta = "none"
-    return {"text": text, "cta": None if cta == "none" else cta}
+    answer = {"text": text, "cta": None if cta == "none" else cta}
+    by_id = {x["id"]: x for x in (allowed or [])}
+    used = getattr(raw, "used_ids", None)
+    sources, seen = [], set()
+    for i in used if isinstance(used, list) else []:
+        if isinstance(i, str) and i in by_id and i not in seen:
+            seen.add(i)
+            sources.append({"id": i, "category": by_id[i]["category"]})
+    if sources:
+        answer["sources"] = sources
+    return answer
 
 
 def ai_answer(message: str, history: list[dict]) -> dict:
     if not settings.OPENAI_API_KEY:
         log.warning("챗봇: OPENAI_API_KEY가 비어 있어 대체 답변")
         return dict(CR.FALLBACK)
-    messages = [{"role": "system", "content": CR.SYSTEM_PROMPT}]
+    items, searched = retrieve(mask_personal(message), history)
+    messages = [{"role": "system", "content": CR.system_prompt(items)}]
     for m in history:
         role = "user" if m.get("from") == "user" else "assistant"
         messages.append({"role": role, "content": mask_personal(str(m.get("text", "")))})
     messages.append({"role": "user", "content": mask_personal(message)})
     try:
-        answer = clean_answer(call_openai(messages))
+        answer = clean_answer(call_openai(messages), items if searched else None)
     except Exception as e:
         # 예외 메시지에 요청 내용이 섞일 수 있어 종류만
         log.warning("챗봇: OpenAI 실패 (%s) — 대체 답변", type(e).__name__)
@@ -196,6 +253,8 @@ def save_turn(db: Database | None, uid: str, conversation_id: str, question: dic
     a = {"id": uuid.uuid4().hex, "from": "bot", "text": answer["text"], "created_at": now}
     if answer.get("cta"):
         a["cta"] = answer["cta"]
+    if answer.get("sources"):
+        a["sources"] = answer["sources"]
     try:
         db.chats.update_one(
             {"uid": uid, "conversation_id": conversation_id},
@@ -255,4 +314,7 @@ def chat(request: Request, body: dict = Body(...), db: Database | None = Depends
         answer = ai_answer(message, load_history(db, uid, conversation_id))
 
     save_turn(db, uid, conversation_id, {"text": message, "quick": quick}, answer)
-    return {"text": answer["text"], "cta": answer.get("cta")}
+    res = {"text": answer["text"], "cta": answer.get("cta")}
+    if answer.get("sources"):
+        res["sources"] = answer["sources"]
+    return res

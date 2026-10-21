@@ -137,27 +137,61 @@ python -m scripts.seed
 - `?sandbox=1`과 `?state=` 미리보기(suspended·issuing·no-payments·loading·error)는 이 API를 부르지 않고 `js/mock-data.js`의 김민준 예시값으로 보여줍니다.
 - 결제·포인트 충전·이동·거래 생성 API는 없습니다(거래는 seed 데이터만).
 
-### 챗봇 API (OpenAI + 규칙 답변 하이브리드)
+### 챗봇 API (OpenAI + 규칙 답변 하이브리드 + 지식 검색 RAG)
 
 09 챗봇(전역 플로팅 위젯)이 쓰는 API. 로그인 없이 쓰고, Sandbox(`?sandbox=1`) 안의 챗봇도 같은 API를 씁니다 (회사 데이터를 바꾸지 않음).
 
 | API | 설명 |
 |---|---|
-| `POST /api/chat` | `{message, quick_reply_id?, conversation_id, anon_id?}` → `{text, cta}` |
+| `POST /api/chat` | `{message, quick_reply_id?, conversation_id, anon_id?}` → `{text, cta, sources?}` |
 
 **구조**
 - **빠른 답변 버튼**(`quick_reply_id`: lead-time · limits · pricing · booking) → `backend/app/chat_rules.py`의 정해진 답변. OpenAI를 부르지 않습니다. 버튼 이름과 똑같이 입력해도 같음.
-- **직접 입력한 질문** → OpenAI가 답합니다. 시스템 프롬프트에 승인된 FAQ(사이트 화면 문구 기준, 출처 표기)만 넣고, FAQ에 없는 사실·서비스와 관계없는 질문은 지어내지 않고 상담 안내 + 상담 예약 버튼. 역할 변경·시스템 프롬프트 공개·지시 무시 요청은 따르지 않습니다.
-- 답변 문구·FAQ·대체 답변은 `chat_rules.py` 한 곳에만 있습니다. 프론트(`js/chat-reply.js`)에는 버튼 id·이름만 있고 `KonaChatReply.get()`이 `/api/chat`을 부릅니다.
+- **직접 입력한 질문** → OpenAI가 답합니다. 시스템 프롬프트에 질문과 관련된 승인 지식 5개만 넣고(아래 RAG), 지식에 없는 사실·서비스와 관계없는 질문은 지어내지 않고 상담 안내 + 상담 예약 버튼. 역할 변경·시스템 프롬프트 공개·지시 무시 요청은 따르지 않습니다.
+- 빠른 답변·대체 답변·시스템 프롬프트 규칙은 `chat_rules.py`, 지식(FAQ)은 `backend/app/knowledge/faq.json` 한 곳에만 있습니다. 프론트(`js/chat-reply.js`)에는 버튼 id·이름만 있고 `KonaChatReply.get()`이 `/api/chat`을 부릅니다.
 - **cta**: `booking`([상담 예약하기]) · `simulator`([무료로 체험하기]) · `null`(버튼 없음). 랜딩에서는 그 모달을 바로 열고, 다른 페이지·Sandbox iframe에서는 바깥 창을 `index.html?action=booking|simulator&source=chatbot`으로 옮겨 모달을 엽니다.
 
 **OpenAI 호출**
 - 모델: `.env`의 `OPENAI_MODEL` (기본 `gpt-4o-mini`), 공식 SDK `openai` (`requirements.txt`에 버전 고정)
-- Structured Outputs로 `{text, cta}`를 받고 서버에서 다시 검사 (text가 비면 대체 답변, cta가 목록 밖이면 `null`, 600자 넘으면 자름)
+- Structured Outputs로 `{text, cta, used_ids}`를 받고 서버에서 다시 검사 (text가 비면 대체 답변, cta가 목록 밖이면 `null`, 600자 넘으면 자름, used_ids는 검색해서 넣은 항목 안의 id만 `sources`로)
 - 같은 대화의 최근 6개 메시지만 맥락으로 보냄 (DB에서 `uid`·`conversation_id`가 둘 다 맞는 대화만 — 남의 대화는 읽지 않음)
 - 사용자 이름·이메일은 보내지 않고, 질문 안의 이메일·전화번호·카드번호 형태는 `[이메일]`처럼 가려서 보냄
 - 답변 상한 300토큰, temperature 0.2, 타임아웃 15초(재시도 없음 — 화면의 20초 대기보다 짧게)
 - API 키는 서버에서만 씁니다. 응답·JS·로그에 넣지 않습니다.
+
+### 챗봇 지식 · RAG
+
+**지식 파일** — `backend/app/knowledge/faq.json`, 54개 (`F1`~`F32`: 7단계 승인 FAQ · 번호는 그대로 유지, `N1`~`N25`: 기획서 1018에서 뽑은 Q&A 22개, 빈 번호 있음)
+
+```json
+{ "id": "F18", "category": "포인트", "question": "법인경비P는 어디에 쓰고 어떻게 차감돼요?",
+  "answer": "법인경비P는 별도 예산이에요. 사무용품, 출장(항공·숙박), 거래처 접대에 쓰고, …", "source": "7단계 승인 FAQ" }
+```
+
+- `category`는 화면의 "참고한 안내: 가격 · 카드 제작"에 그대로 나옵니다 (서비스 · 가격 · 도입 절차 · 시뮬레이터 · 포인트 · 상담 예약 · 가상 대시보드 · 로그인 · 관리자 · 임직원 · 카드 제작 · 안내)
+- `answer`는 승인된 문구 그대로, `source`는 출처(화면 이름 또는 "기획서 5.1"). `question`은 검색용 대표 질문
+
+**흐름 (직접 입력만, 빠른 답변은 규칙 그대로)**
+1. 질문(개인정보 가림)을 `text-embedding-3-small`로 임베딩 (타임아웃 5초). 같은 대화에 직전 질문이 있으면 "직전 질문 + 이번 질문"도 같은 호출로 임베딩해 더 높은 점수를 씀 ("그건 얼마예요?" 같은 이어지는 질문)
+2. 미리 계산해 둔 지식 54개 벡터와 코사인 유사도 → 상위 5개 (`backend/app/rag.py`, 표준 라이브러리만 — 54개라 벡터 DB 없음)
+   - **키워드 일치**: 지식에만 있는 낱말(3글자 이상, 3개 항목 이하에만 나옴, "~요"·"~면" 서술어 제외)이 질문에 있으면 그 항목을 먼저 넣고 관련 있음으로 봄. "사원증형이 뭐예요?"처럼 짧은 질문은 임베딩 점수가 낮게 나와서(0.28) 보완
+3. 1위 유사도가 **0.40 미만이고 키워드 일치도 없으면** "관련 지식 없음"으로 OpenAI를 부름 → 규칙대로 범위 안내·상담 안내, `sources` 없음
+4. 시스템 프롬프트 = 규칙 + `[참고 지식]` 5개(`[F7] (가격) 질문: … 답변: …`). 응답의 `used_ids` 중 그 5개 안의 id만 `sources: [{id, category}]`로 → 화면에 카테고리를 중복 없이 표시, `chats`의 봇 메시지에도 `sources` 저장
+5. 임베딩 파일이 없거나 `faq.json`과 해시·모델이 다르면(서버 시작 시 경고 로그), 또는 임베딩 API 실패·타임아웃이면 → 검색 없이 지식 54개 전체를 넣고 답함 (화면 오류 없음). 이때는 `sources`를 표시하지 않음 — 54개 중에서는 비슷한 id(N24·F24)를 잘못 고르는 경우가 있었고, 서버가 검증할 수 없어서
+
+**기준값 0.40을 고른 근거** — 질문 39개(관련 25 · 지식에 없는 코나비즈 질문 4 · 무관 10)의 1위 유사도
+- 무관(날씨·주식·코딩·번역·농담·KTX·지시 무시 등): 0.20 ~ **0.338**
+- 관련이고 검색이 맞은 질문: 0.451 ~ 0.685 (임베딩만으로는 "사원증형이 뭐예요?" 0.277 · "어디서든 쓸 수 있어요?" 0.289가 무관보다 낮아 → 키워드 일치로 통과)
+- 0.40은 두 묶음 사이의 가운데(무관 최댓값보다 0.06 위, 맞게 검색된 관련 최솟값보다 0.05 아래). 이 묶음에서 무관 0/10 통과, 관련 23/25 통과 (빠진 2개 "술집에서 긁어도 돼요?" 0.276 · "한 달에 얼마 내야 해요" 0.357은 상위 5개에도 정답이 없어 상담 안내로 답함)
+
+**지식을 고친 뒤** (`backend` 폴더에서)
+
+```powershell
+python -m scripts.build_knowledge   # faq.json → faq_embeddings.json (OpenAI 임베딩 1회, 54개를 한 요청으로)
+```
+
+- 다시 만든 뒤 서버를 재시작해야 새 임베딩을 씁니다. 다시 만들지 않으면 해시가 달라 경고 로그 + 지식 전체 방식으로 동작합니다.
+- 문구는 사이트 화면·기획서와 같이 고칩니다. id는 바꾸지 않습니다(대화 기록·테스트에서 씀).
 
 **대체 답변** — OpenAI 실패·타임아웃·키 없음(`OPENAI_API_KEY`가 비었거나 공백)·응답 형식 오류면 오류 문구 대신 "지금은 자세히 답변드리기 어려워요. 정확한 안내는 상담에서 도와드릴게요." + [상담 예약하기]. 서버 로그에는 `챗봇: OpenAI 실패 (APITimeoutError)`처럼 오류 종류만 남깁니다. 서버에 아예 닿지 못하면(네트워크·5xx) 화면은 기존 실패 표시("답변을 받지 못했어요" + [다시 보내기]).
 
@@ -166,7 +200,7 @@ python -m scripts.seed
 - 같은 uid 1분 10회, 같은 IP 1분 30회를 넘으면 429 "잠시 후 다시 질문해주세요." (빠른 답변 포함. 서버 메모리 기준이라 재시작하면 초기화, 새 컬렉션 없음)
 - 422·429 문구는 화면에서 봇 답변처럼 보여줍니다.
 
-**저장** — `chats` 컬렉션에 `{uid, conversation_id}`로 질문·답변을 쌓습니다 (`messages: [{id, from, text, cta?, quick_reply_id?, created_at}]`, `created_at`, `updated_at`).
+**저장** — `chats` 컬렉션에 `{uid, conversation_id}`로 질문·답변을 쌓습니다 (`messages: [{id, from, text, cta?, sources?, quick_reply_id?, created_at}]`, `created_at`, `updated_at`).
 - `uid`: 로그인했으면 `users._id` 문자열(쿠키로 서버가 판단, `anon_id`는 무시), 아니면 브라우저 임시 ID `anon_id`
 - 로그인 성공 → 새 대화(비로그인 대화를 계정에 합치지 않음), 로그아웃 → 임시 ID까지 삭제 (`js/chatbot.js`)
 - DB가 없으면 답변만 하고 저장·맥락은 건너뜁니다. 테스트로 쌓인 대화는 `python -m scripts.seed`로 지워집니다.
@@ -181,7 +215,7 @@ pip install -r requirements-dev.txt
 python -m unittest discover -s tests -t . -v
 ```
 
-- `test_reservations.py`: 예약 시간 규칙·입력 검사
+- `test_reservations.py`: 예약 시간 규칙·입력 검사 (법인경비P 업종 거래처 접대 `entertain` 포함)
 - `test_members.py`: 상태 전이 전체, 409(이미 바뀐 상태·중복 이메일·회수된 이메일), 404(다른 회사·관리자·없는 id), 임직원 계정 403, 임시 비밀번호 1회 노출·재발급 후 이전 비밀번호 실패, 첫 로그인 시 카드 사용 중, 대시보드 숫자
 - `test_me.py`: 본인 카드만 조회(새 직원에게 김민준 데이터 없음), 김민준 잔액·거래 7건(차단 1), 합계에서 법인경비P 제외, 최신순·KST, 거래 0건, 민감 정보 없음, 관리자 403, 비로그인 401, 카드 없음 404
-- `test_chat.py`: 빠른 답변(OpenAI 0회), AI 답변·FAQ·맥락 6개, 개인정보 가림, cta 검사, 타임아웃·연결 실패 대체 답변, 키 없음, 빈 값·500자, 429(uid·IP·시간 지나면 풀림), 비로그인 anon_id·로그인 user id 저장, 남의 대화 읽기·쓰기 안 됨, DB 없이 답변
+- `test_chat.py`: 빠른 답변(OpenAI·임베딩 0회), AI 답변·맥락 6개, RAG(상위 5개만 프롬프트에, 기준값 미만 → 관련 지식 없음, 키워드 일치, used_ids 검증 · 목록 밖 id 제거, sources 응답·저장, 이어지는 질문, 임베딩 실패·검색 불가 → 지식 전체 · sources 없음), 지식 파일(54개 · F18 거래처 접대, 파일 없음·해시·모델 불일치 경고), 개인정보 가림, cta 검사, 타임아웃·연결 실패 대체 답변, 키 없음, 빈 값·500자, 429(uid·IP·시간 지나면 풀림), 비로그인 anon_id·로그인 user id 저장, 남의 대화 읽기·쓰기 안 됨, DB 없이 답변

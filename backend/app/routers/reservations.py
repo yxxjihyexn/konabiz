@@ -28,7 +28,7 @@ EMAIL_MAX = 320
 COUNT_MAX = 1_000_000
 CONSULTATION_TYPES = ("phone", "inperson")
 SOURCES = ("hero", "closing-cta", "chatbot", "simulator", "landing")
-CATEGORIES = ("restaurant", "cafe", "book", "fitness", "hospital", "office", "travel")
+CATEGORIES = ("restaurant", "cafe", "book", "fitness", "hospital", "office", "travel", "entertain")   # 상담예약 칩 순서
 LIMIT_MAX, LIMIT_STEP = 100000, 10000
 SLOTS_MAX_DAYS = 31
 

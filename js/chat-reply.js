@@ -21,7 +21,18 @@ window.KonaChatReply = (function () {
 
   /* message: 사용자가 보낸 문장
      opts: { quickReplyId, anonId, conversationId }
-     → Promise<{ text, cta }> (cta: 'booking' | 'simulator' | 없음. 서버에 닿지 못하면 reject) */
+     → Promise<{ text, cta, sources }> (cta: 'booking' | 'simulator' | 없음. 서버에 닿지 못하면 reject)
+     sources: AI가 근거로 쓴 안내의 카테고리 이름(중복 없이, 순서 유지). 없으면 undefined */
+  function categories(sources) {
+    if (!Array.isArray(sources)) return undefined;
+    var out = [];
+    sources.forEach(function (s) {
+      var c = s && typeof s.category === 'string' ? s.category : '';
+      if (c && out.indexOf(c) < 0) out.push(c);
+    });
+    return out.length ? out : undefined;
+  }
+
   function get(message, opts) {
     opts = opts || {};
     if (failOnce) { failOnce = false; return Promise.reject(new Error('mock-error')); }
@@ -36,7 +47,7 @@ window.KonaChatReply = (function () {
       body: JSON.stringify(body)
     }).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {
-        if (res.ok && typeof data.text === 'string') return { text: data.text, cta: data.cta || undefined };
+        if (res.ok && typeof data.text === 'string') return { text: data.text, cta: data.cta || undefined, sources: categories(data.sources) };
         if ((res.status === 429 || res.status === 422) && typeof data.detail === 'string') return { text: data.detail };
         throw new Error(String(res.status));
       });

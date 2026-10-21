@@ -40,7 +40,8 @@
     { id: 'bar', name: '유흥주점', type: 'restricted' }
   ];
   var BAR_ALERT = { title: '제한 업종', desc: '유흥주점은 어떤 포인트로도 결제할 수 없어요' };
-  var ALL_CATS = ['restaurant', 'cafe', 'book', 'fitness', 'hospital', 'office', 'travel'];
+  /* 상담예약 1단계 업종 칩 전체 — 거래처 접대(entertain)는 규칙 카드에만 있고 시뮬레이터 가맹점에는 없음 */
+  var ALL_CATS = ['restaurant', 'cafe', 'book', 'fitness', 'hospital', 'office', 'travel', 'entertain'];
 
   /* 프리셋 1은 기획서 9.6 문구 그대로. 프리셋 2~4 문구·잔액은 기획서 14.1 "남은 정의 항목" — 임시안 */
   var PRESETS = [
@@ -77,7 +78,7 @@
         ['2순위 차감  ·  복지P', '차단 업종을 뺀 모든 가맹점']
       ],
       balance: { meal: 150000, fitness: 100000, welfare: 100000, expense: 500000 },
-      custom: { time: [0, 24], limit: 30000, cats: ['restaurant', 'cafe', 'book', 'hospital', 'office', 'travel'] }
+      custom: { time: [0, 24], limit: 30000, cats: ['restaurant', 'cafe', 'book', 'hospital', 'office', 'travel', 'entertain'] }
     },
     {
       mode: 'priority',

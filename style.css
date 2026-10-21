@@ -760,9 +760,11 @@ th { font-weight: inherit; text-align: left; }
   30% { opacity: 1; transform: translateY(-2px); }
 }
 
-/* 개인정보 안내 — 아이콘 16 + Caption Secondary */
+/* 개인정보 안내 — 아이콘 16 + Caption Secondary. 참고한 안내(봇 답변 아래)도 같은 Caption, 폭은 말풍선과 같게 */
+.chat-sources { max-width: 264px; }
 .chat-notice,
-.chat-offline {
+.chat-offline,
+.chat-sources {
   display: flex;
   align-items: flex-start;
   gap: 4px;

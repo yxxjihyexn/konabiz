@@ -118,6 +118,14 @@ class ValidateTest(unittest.TestCase):
     def test_simulator_source(self):
         self.assertEqual(validate(body(source="simulator"), NOW)[1], {})
 
+    def test_expense_categories_include_entertain(self):
+        preset = {"time_range": [9, 20], "limit_amount": 50000, "categories": ["entertain", "office", "travel"]}
+        doc, errors = validate(body(custom_preset=preset), NOW)
+        self.assertEqual(errors, {})
+        self.assertEqual(doc["custom_preset"]["categories"], ["office", "travel", "entertain"])   # 화면 칩 순서
+        _, errors = validate(body(custom_preset={**preset, "categories": ["golf-club"]}), NOW)
+        self.assertIn("custom_preset", errors)
+
 
 if __name__ == "__main__":
     unittest.main()
