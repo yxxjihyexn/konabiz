@@ -222,7 +222,7 @@
 
 /* Loading 스켈레톤 — 실제 블록과 같은 크기 */
 .skeleton--card { aspect-ratio: 400 / 252; }
-.skeleton--points { height: 154px; }   /* 접힌 포인트 카드 높이 */
+.skeleton--points { height: 386px; }   /* 펼친 포인트 카드 높이 (PC 기본 펼침, 모바일은 아래 접힌 높이) */
 .skeleton--history { height: 414px; }
 
 /* =========================================================
@@ -503,6 +503,7 @@
   .metric-row { grid-template-columns: minmax(0, 1fr); gap: 16px; } /* → 1열 */
   .empty-steps { flex-direction: column; gap: 24px; align-items: center; }
   .empty-step { width: auto; }
+  .skeleton--points { height: 154px; }   /* 모바일 기본 접힘 */
 
   /* 마이페이지: 카드 → 남은 포인트 → 최근 결제내역 세로, 카드는 전체 폭 + 비율 400:252 유지 */
   .mypage { flex-direction: column; }

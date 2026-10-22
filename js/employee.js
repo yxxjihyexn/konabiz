@@ -100,9 +100,10 @@
   }
 
   /* ---------- 이번 달 남은 포인트 (합계에서 법인경비P 제외) ----------
-     기본은 접힘 — 합계만 크게, [카테고리별 남은 금액](aria-expanded)으로 4종 펼침.
-     결제 테스트 뒤 다시 그려도 펼친 상태 유지 (페이지를 새로 열면 다시 접힘) */
-  var pointsOpen = false;
+     합계는 늘 크게, [카테고리별 남은 금액](aria-expanded)으로 4종 접기·펼치기.
+     기본값은 페이지를 열 때 화면 폭으로 한 번 정함 — PC(768 이상) 펼침 · 모바일(767 이하) 접힘.
+     사용자가 바꾼 상태는 결제 테스트 뒤 다시 그려도 유지 (새로고침하면 다시 기본값) */
+  var pointsOpen = !window.matchMedia('(max-width: 767px)').matches;
 
   function renderPoints(view, onRetry) {
     if (view === 'loading') {
