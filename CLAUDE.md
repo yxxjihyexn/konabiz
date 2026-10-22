@@ -58,7 +58,10 @@
   - 판정: 카드 active 아님 → 키워드 규칙(block) "제한 업종" → low·warn은 `review`(확인 필요, 차감 없음 — AI만으로 차단 안 함) → 카드 `points`에 없는 분류 → 잔액 부족 → 승인
   - 저장은 별도 컬렉션 없이 `cards.transactions`에 `$push` + `$position: 0`(Atlas에서 맨 앞). 승인은 "잔액 ≥ 금액" 조건부 `update_one`($inc + $push 한 번)이라 마이너스 불가. 차단·확인 필요도 기록. 추가 필드 `source: "test"` · `category` · `confidence` · `user_id` · `card_id` · `company`
   - 화면 결제내역은 `/api/me/card`가 시각으로 정렬하므로 배열 순서와 무관. `review`는 아이콘 icon-alert-ink + "확인 필요"
-  - 로드 성공 시에만 보임 — Sandbox · `?state=` 미리보기는 숨김(DB에 안 씀). 이때만 빈 상태 문구가 "위에서 테스트 결제를 해 보세요."
+  - 화면은 모달 `#modal-paytest`(modal--sm 480, 모바일 하단 시트). 결제내역 제목 줄 오른쪽 [결제 테스트](Secondary, `data-open="paytest"`)로 열고, 입력 화면 → 결과 화면(`data-paytest-view`). 결과 문장은 `[data-paytest-live]`가 읽음
+  - 열 때마다 초기화, 결제 중에는 `data-locked` + X·[취소] 비활성. 결과가 나오면 뒤의 포인트·결제내역 바로 갱신, 닫으면 맨 위 행 2초 강조(`.pay-row.is-new`) + 포커스는 [결제 테스트] (결제내역을 다시 그려서 처음 연 버튼이 바뀌므로 modal:close에서 직접 찾음)
+  - 버튼은 로드 성공 시에만 — Sandbox · `?state=` 미리보기에는 없음(DB에 안 씀). 이때만 빈 상태 문구가 "[결제 테스트]로 결제해 보세요."
+  - 마이페이지 "결제 전에 확인하기"(AI 판별기)는 조회 전용으로 따로 유지
   - `python -m scripts.seed` 재실행 = 테스트 결제 포함 users·cards·reservations·chats 전부 초기화
 - 로컬 서버는 5500 하나만 사용(launch.json 포트 고정). 이미 떠 있으면 새로 띄우지 말고 그 서버로 확인
 

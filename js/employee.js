@@ -15,7 +15,7 @@
   var cardArea = document.querySelector('[data-card-area]');
   var points = document.querySelector('[data-points]');
   var history = document.querySelector('[data-history]');
-  var paytest = document.querySelector('[data-paytest]');   /* 로그인한 본인 화면에서만 보임 (Sandbox · 미리보기는 hidden) */
+  var paytestOn = false;   /* [결제 테스트] 버튼 — 로그인한 본인 화면에서만 (Sandbox · ?state= 미리보기는 없음, DB에 안 씀) */
   var REVIEW_MSG = 'AI 확신도가 낮아 관리자 확인이 필요해요';
 
   /* 화면에 그리는 모양 { last4, holder, status, balances{4종}, total, expense, payments[{date, merchant, pocket, amount, blocked}] } */
@@ -153,6 +153,10 @@
 
   function renderHistory(view, onRetry) {
     var title = '<h2 id="history-title" class="panel__title">최근 결제내역</h2>';
+    if (paytestOn && typeof view === 'object') {
+      title = '<div class="history-head">' + title +
+        '<button class="btn btn--secondary" type="button" data-open="paytest" aria-haspopup="dialog">결제 테스트</button></div>';
+    }
     if (view === 'loading') {
       history.innerHTML = title + '<div class="skeleton skeleton--history" aria-hidden="true"></div>';
       history.setAttribute('aria-busy', 'true');
@@ -168,9 +172,9 @@
     if (!payments.length) {
       history.innerHTML = title +
         '<div class="empty-state"><div class="empty-state__text">' +
-        (paytest.hidden
-          ? '<p class="empty-state__title">아직 결제 내역이 없어요</p><p class="empty-state__desc">카드로 결제하면 여기에 바로 표시돼요</p>'
-          : '<p class="empty-state__title">아직 결제내역이 없어요</p><p class="empty-state__desc">위에서 테스트 결제를 해 보세요.</p>') +
+        (paytestOn
+          ? '<p class="empty-state__title">아직 결제내역이 없어요</p><p class="empty-state__desc">[결제 테스트]로 결제해 보세요.</p>'
+          : '<p class="empty-state__title">아직 결제 내역이 없어요</p><p class="empty-state__desc">카드로 결제하면 여기에 바로 표시돼요</p>') +
         '</div></div>';
       return;
     }
@@ -200,35 +204,56 @@
     });
   }
 
-  /* ---------- 결제 테스트 (시연용) — POST /api/payments/test ----------
-     응답 { transaction(결제내역 모양), points, summary } → 새로고침 없이 포인트 · 결제내역 맨 위 갱신
-     예시 칩은 누르면 입력칸만 채움(결제는 버튼으로). 가맹점 칩은 랜딩 판별기와 같은 4개 */
+  /* ---------- 결제 테스트 (시연용) 모달 — POST /api/payments/test ----------
+     결제내역 제목 줄 [결제 테스트](data-open) → #modal-paytest. 열 때마다 입력·결과 초기화, 결제 중에는 data-locked
+     응답 { transaction(결제내역 모양), points, summary } → 결과 화면 + 뒤의 포인트 · 결제내역 즉시 갱신(새 항목 맨 위)
+     닫으면 새 항목 2초 강조 + 포커스는 [결제 테스트]로 (결제내역을 다시 그려 처음 연 버튼이 바뀌므로 직접 찾음)
+     예시 칩은 누르면 입력칸만 채움. 가맹점 칩은 랜딩 판별기와 같은 4개 */
   var PT_MERCHANTS = ['달빛우동 성수점', '애니타임피트니스', '새벽별문구', '블루문 유흥주점'];
   var PT_AMOUNTS = [9000, 30000];
   var PT_NAME_MAX = 40, PT_MIN = 100, PT_MAX = 1000000;   /* backend routers/payments.py와 같은 값 */
-  var PT_FAIL = '결제를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
-  var PT_IDLE = paytest.querySelector('[data-paytest-result]').innerHTML;
 
-  var ptForm = paytest.querySelector('[data-paytest-form]');
-  var ptMerchant = paytest.querySelector('#paytest-merchant');
-  var ptAmount = paytest.querySelector('#paytest-amount');
-  var ptSubmit = paytest.querySelector('.paytest__submit');
-  var ptResult = paytest.querySelector('[data-paytest-result]');
+  var ptModal = document.getElementById('modal-paytest');
+  var ptForm = ptModal.querySelector('[data-paytest-form]');
+  var ptMerchant = ptModal.querySelector('#paytest-merchant');
+  var ptAmount = ptModal.querySelector('#paytest-amount');
+  var ptSubmit = ptModal.querySelector('[data-paytest-submit]');
+  var ptAlert = ptModal.querySelector('[data-paytest-alert]');
+  var ptResult = ptModal.querySelector('[data-paytest-result]');
+  var ptFacts = ptModal.querySelector('[data-paytest-facts]');
+  var ptLive = ptModal.querySelector('[data-paytest-live]');
   var ptBusy = false;
+  var ptNew = false;   /* 이번에 연 동안 결제가 기록됐는지 — 닫을 때 맨 위 항목 강조 */
 
-  paytest.querySelector('[data-paytest-chips="merchant"]').innerHTML = PT_MERCHANTS.map(function (m) {
+  ptModal.querySelector('[data-paytest-chips="merchant"]').innerHTML = PT_MERCHANTS.map(function (m) {
     return '<button class="chip-toggle chip-quick" type="button" data-pt-merchant>' + A.esc(m) + '</button>';
   }).join('');
-  paytest.querySelector('[data-paytest-chips="amount"]').innerHTML = PT_AMOUNTS.map(function (n) {
+  ptModal.querySelector('[data-paytest-chips="amount"]').innerHTML = PT_AMOUNTS.map(function (n) {
     return '<button class="chip-toggle chip-quick" type="button" data-pt-amount="' + n + '">' + A.won(n) + '</button>';
   }).join('');
-  var ptChips = paytest.querySelectorAll('.chip-quick');
+  var ptChips = ptModal.querySelectorAll('.chip-quick');
+
+  function ptView(name) {
+    ptModal.querySelectorAll('[data-paytest-view]').forEach(function (v) {
+      v.hidden = v.getAttribute('data-paytest-view') !== name;
+    });
+  }
 
   function ptFieldError(key, msg) {
-    var field = paytest.querySelector('[data-paytest-field="' + key + '"]');
+    var field = ptModal.querySelector('[data-paytest-field="' + key + '"]');
     field.classList.toggle('is-error', !!msg);
     field.querySelector('.field__error').textContent = msg || '';
     field.querySelector('.field__input').setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+
+  /* 입력 화면 처음 상태 (값 비움) */
+  function ptReset() {
+    ptForm.reset();
+    ptFieldError('merchant', '');
+    ptFieldError('amount', '');
+    ptAlert.hidden = true;
+    ptLive.textContent = '';
+    ptView('form');
   }
 
   /* 화면 검사 — 서버 규칙과 같음. 금액은 쉼표 허용 */
@@ -251,25 +276,25 @@
     else if (errors.amount) ptAmount.focus();
   }
 
+  /* 로그인 버튼과 같은 방식: 비활성 + "결제 중…". 그동안 X · 바깥 클릭 · ESC로 닫히지 않음 */
   function ptSetBusy(on) {
     ptBusy = on;
     ptSubmit.disabled = on;
-    ptSubmit.textContent = on ? '결제 중…' : '테스트 결제하기';
+    ptSubmit.textContent = on ? '결제 중…' : '결제하기';
     ptMerchant.disabled = on;
     ptAmount.disabled = on;
     ptChips.forEach(function (c) { c.disabled = on; });
-    if (on) ptResult.setAttribute('aria-busy', 'true'); else ptResult.removeAttribute('aria-busy');
+    ptForm.closest('[data-paytest-view]').querySelectorAll('[data-modal-close]').forEach(function (b) { b.disabled = on; });   /* X · [취소] */
+    ptModal.toggleAttribute('data-locked', on);
   }
 
-  function ptShow(cls, icon, headline, detail) {
-    ptResult.className = 'result-box paytest__result' + (cls ? ' is-' + cls : '');
-    ptResult.innerHTML = '<p class="paytest__headline"><img src="assets/' + icon + '" alt="" width="20" height="20">' + A.esc(headline) + '</p>' +
-      (detail ? '<p class="paytest__detail">' + detail + '</p>' : '');
+  function ptFact(label, value) {
+    return '<li class="info-row"><span class="info-row__label">' + label + '</span><span class="info-row__value">' + value + '</span></li>';
   }
 
   function ptDone(r) {
     var t = r.transaction;
-    /* 포인트 카드 · 결제내역 갱신 (결제내역은 처음 5건부터 다시 그림) */
+    /* 모달 뒤 포인트 카드 · 결제내역 갱신 (결제내역은 처음 5건부터 다시 그림) */
     var bal = {};
     Object.keys(r.points).forEach(function (k) { bal[k] = r.points[k].balance; });
     current.balances = bal;
@@ -278,17 +303,32 @@
     current.payments = [fromApi({ points: r.points, summary: r.summary, transactions: [t] }).payments[0]].concat(current.payments);
     renderPoints(current);
     renderHistory(current);
+    ptNew = true;
+
+    var pocket = t.pocket && KonaMock.POCKET_NAME[t.pocket].replace(/P$/, ' 포인트');
+    var cls, icon, headline;
+    if (t.status === 'approved') {
+      cls = 'approved'; icon = 'icon-check-green.svg'; headline = pocket + '에서 ' + A.won(t.amount) + '이 차감됐어요';
+    } else if (t.status === 'review') {
+      cls = 'review'; icon = 'icon-alert-ink.svg'; headline = 'AI 확신도가 낮아 관리자 확인이 필요해요 (차감 안 됨)';
+    } else {
+      cls = 'blocked'; icon = 'icon-stop-danger.svg'; headline = '결제가 차단됐어요 · ' + (t.blocked_reason || '결제할 수 없어요');
+    }
+    ptResult.className = 'result-box paytest-result is-' + cls;
+    ptResult.innerHTML = '<p class="paytest-result__headline"><img src="assets/' + icon + '" alt="" width="20" height="20">' + A.esc(headline) + '</p>';
 
     var ai = t.ai;
-    var detail = A.esc(t.merchant) + ' · ' + A.won(t.amount) +
-      (ai ? ' · ' + (ai.source === 'rule' ? '제한 업종 규칙' : 'AI 분류 ' + A.esc(ai.industry) + ' ' + Math.min(99, Math.round(ai.confidence * 100)) + '%') : '');
-    if (t.status === 'approved') {
-      ptShow('approved', 'icon-check-green.svg', KonaMock.POCKET_NAME[t.pocket].replace(/P$/, ' 포인트') + '에서 ' + A.won(t.amount) + '이 차감됐어요', detail);
-    } else if (t.status === 'review') {
-      ptShow('review', 'icon-alert-ink.svg', 'AI 확신도가 낮아 관리자 확인이 필요해요 (차감 안 됨)', detail);
-    } else {
-      ptShow('blocked', 'icon-stop-danger.svg', '결제가 차단됐어요 · ' + (t.blocked_reason || '결제할 수 없어요'), detail);
-    }
+    ptFacts.innerHTML =
+      ptFact('상태', cls === 'approved' ? '승인' : cls === 'review' ? '확인 필요' : '차단') +
+      ptFact('가맹점', A.esc(t.merchant)) +
+      ptFact('금액', A.won(t.amount)) +
+      (ai ? ptFact('AI 분류', ai.source === 'rule' ? '제한 업종 규칙'
+        : A.esc(ai.industry) + ' · 확신도 ' + Math.min(99, Math.round(ai.confidence * 100)) + '%') : '') +
+      (cls === 'approved' ? ptFact('차감', pocket + ' ' + A.won(t.amount)) : ptFact('사유', A.esc(t.blocked_reason || '-')));
+
+    ptView('result');
+    ptModal.querySelector('[data-paytest-ok]').focus();
+    ptLive.textContent = headline;   /* 보이는 결과 문장을 스크린리더가 읽음 */
   }
 
   ptForm.addEventListener('submit', function (e) {
@@ -297,6 +337,7 @@
     var v = ptValidate();
     if (v.errors.merchant || v.errors.amount) { ptShowErrors(v.errors); return; }
     ptShowErrors({});
+    ptAlert.hidden = true;
     ptSetBusy(true);
     fetch('/api/payments/test', {
       method: 'POST', credentials: 'same-origin',
@@ -310,19 +351,14 @@
           return;
         }
         ptSetBusy(false);   /* 비활성이던 입력칸으로 포커스를 옮길 수 있게 먼저 */
-        if (res.status === 422 && data.errors) {   /* 입력값은 그대로, 오류 칸으로 포커스 */
-          ptResult.className = 'result-box paytest__result';
-          ptResult.innerHTML = PT_IDLE;
-          ptShowErrors(data.errors);
-          return;
-        }
-        if (res.ok) ptDone(data);
-        else ptShow('fail', 'icon-alert.svg', res.status === 429 && typeof data.detail === 'string' ? data.detail : PT_FAIL);
+        if (res.ok) { ptDone(data); return; }
+        if (res.status === 422 && data.errors) { ptShowErrors(data.errors); return; }   /* 입력값 그대로 */
+        ptAlert.hidden = false;   /* 429 · 5xx — 입력값 그대로 */
         ptSubmit.focus();
       });
     }).catch(function () {   /* 네트워크 오류 — 입력값 유지 */
       ptSetBusy(false);
-      ptShow('fail', 'icon-alert.svg', PT_FAIL);
+      ptAlert.hidden = false;
       ptSubmit.focus();
     });
   });
@@ -333,11 +369,28 @@
       if (field.classList.contains('is-error')) ptFieldError(field.getAttribute('data-paytest-field'), '');
     });
   });
-  paytest.querySelectorAll('[data-pt-merchant]').forEach(function (c) {
+  ptModal.querySelectorAll('[data-pt-merchant]').forEach(function (c) {
     c.addEventListener('click', function () { ptMerchant.value = c.textContent; ptFieldError('merchant', ''); });
   });
-  paytest.querySelectorAll('[data-pt-amount]').forEach(function (c) {
+  ptModal.querySelectorAll('[data-pt-amount]').forEach(function (c) {
     c.addEventListener('click', function () { ptAmount.value = A.num(+c.getAttribute('data-pt-amount')); ptFieldError('amount', ''); });
+  });
+  ptModal.querySelector('[data-paytest-again]').addEventListener('click', function () {
+    ptReset();
+    ptMerchant.focus();
+  });
+
+  ptModal.addEventListener('modal:open', function () {
+    ptNew = false;
+    ptReset();
+  });
+  ptModal.addEventListener('modal:close', function () {
+    var btn = history.querySelector('[data-open="paytest"]');
+    if (btn) btn.focus({ preventScroll: true });
+    var row = ptNew && history.querySelector('.pay-row');
+    if (!row) return;
+    row.classList.add('is-new');
+    setTimeout(function () { row.classList.remove('is-new'); }, 2000);
   });
 
   /* ---------- 불러오기 ---------- */
@@ -349,7 +402,7 @@
       return res.json();
     }).then(function (r) {
       if (!r) return;
-      paytest.hidden = false;   /* 빈 상태 문구가 이 값을 보므로 render 전에 */
+      paytestOn = true;   /* 결제내역 제목 줄 버튼 · 빈 상태 문구가 이 값을 보므로 render 전에 */
       render(fromApi(r));
     }).catch(function () {
       render('error', load);
