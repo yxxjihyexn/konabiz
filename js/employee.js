@@ -208,9 +208,8 @@
      결제내역 제목 줄 [결제 테스트](data-open) → #modal-paytest. 열 때마다 입력·결과 초기화, 결제 중에는 data-locked
      응답 { transaction(결제내역 모양), points, summary } → 결과 화면 + 뒤의 포인트 · 결제내역 즉시 갱신(새 항목 맨 위)
      닫으면 새 항목 2초 강조 + 포커스는 [결제 테스트]로 (결제내역을 다시 그려 처음 연 버튼이 바뀌므로 직접 찾음)
-     예시 칩은 누르면 입력칸만 채움. 가맹점 칩은 랜딩 판별기와 같은 4개 */
+     가맹점 예시 칩(랜딩 판별기와 같은 4개)은 누르면 입력칸만 채움. 금액은 직접 입력만 */
   var PT_MERCHANTS = ['달빛우동 성수점', '애니타임피트니스', '새벽별문구', '블루문 유흥주점'];
-  var PT_AMOUNTS = [9000, 30000];
   var PT_NAME_MAX = 40, PT_MIN = 100, PT_MAX = 1000000;   /* backend routers/payments.py와 같은 값 */
 
   var ptModal = document.getElementById('modal-paytest');
@@ -227,9 +226,6 @@
 
   ptModal.querySelector('[data-paytest-chips="merchant"]').innerHTML = PT_MERCHANTS.map(function (m) {
     return '<button class="chip-toggle chip-quick" type="button" data-pt-merchant>' + A.esc(m) + '</button>';
-  }).join('');
-  ptModal.querySelector('[data-paytest-chips="amount"]').innerHTML = PT_AMOUNTS.map(function (n) {
-    return '<button class="chip-toggle chip-quick" type="button" data-pt-amount="' + n + '">' + A.won(n) + '</button>';
   }).join('');
   var ptChips = ptModal.querySelectorAll('.chip-quick');
 
@@ -371,9 +367,6 @@
   });
   ptModal.querySelectorAll('[data-pt-merchant]').forEach(function (c) {
     c.addEventListener('click', function () { ptMerchant.value = c.textContent; ptFieldError('merchant', ''); });
-  });
-  ptModal.querySelectorAll('[data-pt-amount]').forEach(function (c) {
-    c.addEventListener('click', function () { ptAmount.value = A.num(+c.getAttribute('data-pt-amount')); ptFieldError('amount', ''); });
   });
   ptModal.querySelector('[data-paytest-again]').addEventListener('click', function () {
     ptReset();

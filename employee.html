@@ -107,19 +107,13 @@
               <div class="chip-group__row" data-paytest-chips="merchant"></div>
             </div>
           </div>
-          <div class="paytest-form__group">
-            <div class="field" data-paytest-field="amount">
-              <label class="field__label" for="paytest-amount">금액 (원)</label>
-              <div class="field__control">
-                <input id="paytest-amount" class="field__input" type="text" inputmode="numeric" autocomplete="off"
-                       placeholder="예: 9,000" aria-describedby="paytest-amount-error" aria-invalid="false">
-              </div>
-              <p id="paytest-amount-error" class="field__error"></p>
+          <div class="field" data-paytest-field="amount">
+            <label class="field__label" for="paytest-amount">금액 (원)</label>
+            <div class="field__control">
+              <input id="paytest-amount" class="field__input" type="text" inputmode="numeric" autocomplete="off"
+                     placeholder="예: 9,000" aria-describedby="paytest-amount-error" aria-invalid="false">
             </div>
-            <div class="chip-group" role="group" aria-labelledby="paytest-chips-amount">
-              <p id="paytest-chips-amount" class="chip-group__title">금액</p>
-              <div class="chip-group__row" data-paytest-chips="amount"></div>
-            </div>
+            <p id="paytest-amount-error" class="field__error"></p>
           </div>
           <!-- 서버·네트워크 오류 (입력값은 그대로) -->
           <div class="alert-box" role="alert" data-paytest-alert hidden>
