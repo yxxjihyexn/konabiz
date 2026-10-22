@@ -58,6 +58,47 @@
           <section class="panel" aria-labelledby="points-title" data-points></section>
         </div>
         <div class="mypage__right">
+          <!-- 결제 테스트(시연용) — 결제내역 바로 위. 로그인한 본인 화면에서만 보임 (Sandbox · ?state= 미리보기는 hidden 그대로, DB에 안 씀) -->
+          <section class="panel paytest" aria-labelledby="paytest-title" data-paytest hidden>
+            <div class="panel__head">
+              <h2 id="paytest-title" class="panel__title">결제 테스트 (시연용)</h2>
+              <p class="panel__desc">실제 결제는 매장에서 카드로 이뤄져요. 이 영역은 시연을 위한 테스트 결제입니다.</p>
+            </div>
+            <form class="paytest__form" novalidate data-paytest-form>
+              <div class="paytest__row">
+                <div class="field paytest__merchant" data-paytest-field="merchant">
+                  <label class="field__label" for="paytest-merchant">가맹점 이름</label>
+                  <div class="field__control">
+                    <input id="paytest-merchant" class="field__input" type="text" maxlength="40" autocomplete="off"
+                           placeholder="예) 달빛우동 성수점" aria-describedby="paytest-merchant-error" aria-invalid="false">
+                  </div>
+                  <p id="paytest-merchant-error" class="field__error"></p>
+                </div>
+                <div class="field paytest__amount" data-paytest-field="amount">
+                  <label class="field__label" for="paytest-amount">금액 (원)</label>
+                  <div class="field__control">
+                    <input id="paytest-amount" class="field__input" type="text" inputmode="numeric" autocomplete="off"
+                           placeholder="9,000" aria-describedby="paytest-amount-error" aria-invalid="false">
+                  </div>
+                  <p id="paytest-amount-error" class="field__error"></p>
+                </div>
+                <button class="btn btn--primary paytest__submit" type="submit">테스트 결제하기</button>
+              </div>
+              <div class="paytest__chips">
+                <div class="chip-group" role="group" aria-labelledby="paytest-chips-merchant">
+                  <p id="paytest-chips-merchant" class="chip-group__title">예시 가맹점</p>
+                  <div class="chip-group__row" data-paytest-chips="merchant"></div>
+                </div>
+                <div class="chip-group" role="group" aria-labelledby="paytest-chips-amount">
+                  <p id="paytest-chips-amount" class="chip-group__title">금액</p>
+                  <div class="chip-group__row" data-paytest-chips="amount"></div>
+                </div>
+              </div>
+            </form>
+            <div class="result-box paytest__result" role="status" aria-live="polite" data-paytest-result>
+              <p class="result-box__idle">가맹점과 금액을 넣고 [테스트 결제하기]를 눌러보세요</p>
+            </div>
+          </section>
           <section class="panel" aria-labelledby="history-title" data-history></section>
           <!-- AI 판별기 — 결제내역 아래 (모바일: 카드 → 포인트 → 결제내역 → 판별) -->
           <section class="panel" aria-labelledby="precheck-title">

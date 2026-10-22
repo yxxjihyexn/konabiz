@@ -54,6 +54,12 @@
   - 모달이 열리면 `common.js`가 패널을 닫음(입력 중 문구 유지). [상담 예약하기]·[무료로 체험하기]: 랜딩은 opener=FAB로 그 모달(유입 경로 `chatbot`), 다른 페이지는 `index.html?action=booking|simulator&source=chatbot`(iframe은 바깥 창 이동)
   - Figma와 다른 점: 입력칸은 textarea 왼쪽 정렬·최대 4줄(7.8), [새 대화 시작]은 아이콘 + aria-label·툴팁. 답변 실패는 Danger 아이콘 16 + Caption(load-error의 "빨강 안 씀"은 패널 전체 실패용)
   - 767 이하 전체 화면: FAB 숨김, 헤더 닫기 버튼, 열 때 입력칸 포커스 안 함, visualViewport 높이에 맞춤
+- 결제 테스트(시연용, employee.html 결제내역 위): `POST /api/payments/test` (`backend/app/routers/payments.py`, 임직원 본인만 · 사용자 1분 20회)
+  - 판정: 카드 active 아님 → 키워드 규칙(block) "제한 업종" → low·warn은 `review`(확인 필요, 차감 없음 — AI만으로 차단 안 함) → 카드 `points`에 없는 분류 → 잔액 부족 → 승인
+  - 저장은 별도 컬렉션 없이 `cards.transactions`에 `$push` + `$position: 0`(Atlas에서 맨 앞). 승인은 "잔액 ≥ 금액" 조건부 `update_one`($inc + $push 한 번)이라 마이너스 불가. 차단·확인 필요도 기록. 추가 필드 `source: "test"` · `category` · `confidence` · `user_id` · `card_id` · `company`
+  - 화면 결제내역은 `/api/me/card`가 시각으로 정렬하므로 배열 순서와 무관. `review`는 아이콘 icon-alert-ink + "확인 필요"
+  - 로드 성공 시에만 보임 — Sandbox · `?state=` 미리보기는 숨김(DB에 안 씀). 이때만 빈 상태 문구가 "위에서 테스트 결제를 해 보세요."
+  - `python -m scripts.seed` 재실행 = 테스트 결제 포함 users·cards·reservations·chats 전부 초기화
 - 로컬 서버는 5500 하나만 사용(launch.json 포트 고정). 이미 떠 있으면 새로 띄우지 말고 그 서버로 확인
 
 ## 작업 방식

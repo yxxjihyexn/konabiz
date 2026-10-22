@@ -15,6 +15,8 @@
   var cardArea = document.querySelector('[data-card-area]');
   var points = document.querySelector('[data-points]');
   var history = document.querySelector('[data-history]');
+  var paytest = document.querySelector('[data-paytest]');   /* 로그인한 본인 화면에서만 보임 (Sandbox · 미리보기는 hidden) */
+  var REVIEW_MSG = 'AI 확신도가 낮아 관리자 확인이 필요해요';
 
   /* 화면에 그리는 모양 { last4, holder, status, balances{4종}, total, expense, payments[{date, merchant, pocket, amount, blocked}] } */
 
@@ -42,6 +44,7 @@
         return {
           date: t.paid_at.slice(5, 10).replace('-', '/'), merchant: t.merchant, pocket: t.pocket, amount: t.amount,
           blocked: t.status === 'blocked' ? (t.blocked_reason || '결제가 차단됐어요') : null,
+          review: t.status === 'review' ? (t.blocked_reason || REVIEW_MSG) : null,
           ai: t.ai || null
         };
       })
@@ -126,18 +129,25 @@
   /* AI 분류 줄 — seed 때 모델로 계산해 저장한 값 (없으면 줄 없음). 규칙 판정은 "제한 업종 규칙" */
   function aiLine(ai) {
     if (!ai) return '';
-    var text = ai.source === 'rule' ? '제한 업종 규칙' : 'AI 분류 · ' + A.esc(ai.industry) + (ai.level === 'low' ? ' · 확실하지 않음' : '');
+    /* 확신도는 판별기와 같이 99%까지만 */
+    var text = ai.source === 'rule' ? '제한 업종 규칙' : 'AI 분류 · ' + A.esc(ai.industry) +
+      ' · 확신도 ' + Math.min(99, Math.round(ai.confidence * 100)) + '%' + (ai.level === 'low' ? ' · 확실하지 않음' : '');
     return '<p class="pay-row__ai"><span class="badge-status badge-status--ai badge-status--xs" aria-hidden="true">AI</span>' +
       '<span>' + (ai.source === 'rule' ? '<span class="visually-hidden">AI </span>' : '') + text + '</span></p>';
   }
 
+  /* 상태: 승인 · 차단 · 확인 필요(review — 결제 테스트에서 AI 확신도가 낮을 때, 차감 없음) */
   function payRow(p) {
     var blocked = !!p.blocked;
-    return '<li class="pay-row' + (blocked ? ' is-blocked' : '') + '">' +
-      '<img class="pay-row__icon" src="assets/' + (blocked ? 'icon-stop.svg' : 'icon-check-green.svg') + '" alt="' + (blocked ? '차단' : '승인') + '" width="20" height="20">' +
+    var review = !blocked && !!p.review;
+    var icon = blocked ? 'icon-stop.svg' : review ? 'icon-alert-ink.svg' : 'icon-check-green.svg';
+    var label = blocked ? '차단' : review ? '확인 필요' : '승인';
+    var reason = blocked ? p.blocked : review ? p.review : '';
+    return '<li class="pay-row' + (blocked ? ' is-blocked' : review ? ' is-review' : '') + '">' +
+      '<img class="pay-row__icon" src="assets/' + icon + '" alt="' + label + '" width="20" height="20">' +
       '<div class="pay-row__text"><p class="pay-row__title">' + A.esc(p.merchant) + '</p>' +
-      '<p class="pay-row__meta">' + p.date + ' · ' + (blocked ? '차단' : KonaMock.POCKET_NAME[p.pocket]) + '</p>' +
-      (blocked ? '<p class="pay-row__reason">' + A.esc(p.blocked) + '</p>' : '') + aiLine(p.ai) + '</div>' +
+      '<p class="pay-row__meta">' + p.date + ' · ' + (blocked || review ? label : KonaMock.POCKET_NAME[p.pocket]) + '</p>' +
+      (reason ? '<p class="pay-row__reason">' + A.esc(reason) + '</p>' : '') + aiLine(p.ai) + '</div>' +
       '<p class="pay-row__amount">' + A.won(p.amount) + '</p></li>';
   }
 
@@ -158,8 +168,10 @@
     if (!payments.length) {
       history.innerHTML = title +
         '<div class="empty-state"><div class="empty-state__text">' +
-        '<p class="empty-state__title">아직 결제 내역이 없어요</p>' +
-        '<p class="empty-state__desc">카드로 결제하면 여기에 바로 표시돼요</p></div></div>';
+        (paytest.hidden
+          ? '<p class="empty-state__title">아직 결제 내역이 없어요</p><p class="empty-state__desc">카드로 결제하면 여기에 바로 표시돼요</p>'
+          : '<p class="empty-state__title">아직 결제내역이 없어요</p><p class="empty-state__desc">위에서 테스트 결제를 해 보세요.</p>') +
+        '</div></div>';
       return;
     }
 
@@ -188,6 +200,146 @@
     });
   }
 
+  /* ---------- 결제 테스트 (시연용) — POST /api/payments/test ----------
+     응답 { transaction(결제내역 모양), points, summary } → 새로고침 없이 포인트 · 결제내역 맨 위 갱신
+     예시 칩은 누르면 입력칸만 채움(결제는 버튼으로). 가맹점 칩은 랜딩 판별기와 같은 4개 */
+  var PT_MERCHANTS = ['달빛우동 성수점', '애니타임피트니스', '새벽별문구', '블루문 유흥주점'];
+  var PT_AMOUNTS = [9000, 30000];
+  var PT_NAME_MAX = 40, PT_MIN = 100, PT_MAX = 1000000;   /* backend routers/payments.py와 같은 값 */
+  var PT_FAIL = '결제를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
+  var PT_IDLE = paytest.querySelector('[data-paytest-result]').innerHTML;
+
+  var ptForm = paytest.querySelector('[data-paytest-form]');
+  var ptMerchant = paytest.querySelector('#paytest-merchant');
+  var ptAmount = paytest.querySelector('#paytest-amount');
+  var ptSubmit = paytest.querySelector('.paytest__submit');
+  var ptResult = paytest.querySelector('[data-paytest-result]');
+  var ptBusy = false;
+
+  paytest.querySelector('[data-paytest-chips="merchant"]').innerHTML = PT_MERCHANTS.map(function (m) {
+    return '<button class="chip-toggle chip-quick" type="button" data-pt-merchant>' + A.esc(m) + '</button>';
+  }).join('');
+  paytest.querySelector('[data-paytest-chips="amount"]').innerHTML = PT_AMOUNTS.map(function (n) {
+    return '<button class="chip-toggle chip-quick" type="button" data-pt-amount="' + n + '">' + A.won(n) + '</button>';
+  }).join('');
+  var ptChips = paytest.querySelectorAll('.chip-quick');
+
+  function ptFieldError(key, msg) {
+    var field = paytest.querySelector('[data-paytest-field="' + key + '"]');
+    field.classList.toggle('is-error', !!msg);
+    field.querySelector('.field__error').textContent = msg || '';
+    field.querySelector('.field__input').setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+
+  /* 화면 검사 — 서버 규칙과 같음. 금액은 쉼표 허용 */
+  function ptValidate() {
+    var name = ptMerchant.value.trim();
+    var raw = ptAmount.value.replace(/[,\s]/g, '').replace(/원$/, '');
+    var errors = {};
+    if (!name) errors.merchant = '가맹점 이름을 입력해주세요.';
+    else if (name.length > PT_NAME_MAX) errors.merchant = '가맹점 이름은 ' + PT_NAME_MAX + '자까지 입력할 수 있어요.';
+    if (!raw) errors.amount = '금액을 입력해주세요.';
+    else if (!/^\d+$/.test(raw)) errors.amount = '금액은 숫자로만 입력해주세요.';
+    else if (+raw < PT_MIN || +raw > PT_MAX) errors.amount = A.num(PT_MIN) + '원부터 ' + A.num(PT_MAX) + '원까지 입력할 수 있어요.';
+    return { values: { merchant: name, amount: +raw }, errors: errors };
+  }
+
+  function ptShowErrors(errors) {
+    ptFieldError('merchant', errors.merchant);
+    ptFieldError('amount', errors.amount);
+    if (errors.merchant) ptMerchant.focus();
+    else if (errors.amount) ptAmount.focus();
+  }
+
+  function ptSetBusy(on) {
+    ptBusy = on;
+    ptSubmit.disabled = on;
+    ptSubmit.textContent = on ? '결제 중…' : '테스트 결제하기';
+    ptMerchant.disabled = on;
+    ptAmount.disabled = on;
+    ptChips.forEach(function (c) { c.disabled = on; });
+    if (on) ptResult.setAttribute('aria-busy', 'true'); else ptResult.removeAttribute('aria-busy');
+  }
+
+  function ptShow(cls, icon, headline, detail) {
+    ptResult.className = 'result-box paytest__result' + (cls ? ' is-' + cls : '');
+    ptResult.innerHTML = '<p class="paytest__headline"><img src="assets/' + icon + '" alt="" width="20" height="20">' + A.esc(headline) + '</p>' +
+      (detail ? '<p class="paytest__detail">' + detail + '</p>' : '');
+  }
+
+  function ptDone(r) {
+    var t = r.transaction;
+    /* 포인트 카드 · 결제내역 갱신 (결제내역은 처음 5건부터 다시 그림) */
+    var bal = {};
+    Object.keys(r.points).forEach(function (k) { bal[k] = r.points[k].balance; });
+    current.balances = bal;
+    current.total = r.summary.remaining;
+    current.expense = r.summary.expense;
+    current.payments = [fromApi({ points: r.points, summary: r.summary, transactions: [t] }).payments[0]].concat(current.payments);
+    renderPoints(current);
+    renderHistory(current);
+
+    var ai = t.ai;
+    var detail = A.esc(t.merchant) + ' · ' + A.won(t.amount) +
+      (ai ? ' · ' + (ai.source === 'rule' ? '제한 업종 규칙' : 'AI 분류 ' + A.esc(ai.industry) + ' ' + Math.min(99, Math.round(ai.confidence * 100)) + '%') : '');
+    if (t.status === 'approved') {
+      ptShow('approved', 'icon-check-green.svg', KonaMock.POCKET_NAME[t.pocket].replace(/P$/, ' 포인트') + '에서 ' + A.won(t.amount) + '이 차감됐어요', detail);
+    } else if (t.status === 'review') {
+      ptShow('review', 'icon-alert-ink.svg', 'AI 확신도가 낮아 관리자 확인이 필요해요 (차감 안 됨)', detail);
+    } else {
+      ptShow('blocked', 'icon-stop-danger.svg', '결제가 차단됐어요 · ' + (t.blocked_reason || '결제할 수 없어요'), detail);
+    }
+  }
+
+  ptForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (ptBusy || !current) return;
+    var v = ptValidate();
+    if (v.errors.merchant || v.errors.amount) { ptShowErrors(v.errors); return; }
+    ptShowErrors({});
+    ptSetBusy(true);
+    fetch('/api/payments/test', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(v.values)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (res.status === 401) {   /* 로그인 만료 — app.js와 같은 방식 */
+          var expired = res.headers.get('X-Auth-Error') === 'expired';
+          window.location.replace('index.html?login=1' + (expired ? '&expired=1' : ''));
+          return;
+        }
+        ptSetBusy(false);   /* 비활성이던 입력칸으로 포커스를 옮길 수 있게 먼저 */
+        if (res.status === 422 && data.errors) {   /* 입력값은 그대로, 오류 칸으로 포커스 */
+          ptResult.className = 'result-box paytest__result';
+          ptResult.innerHTML = PT_IDLE;
+          ptShowErrors(data.errors);
+          return;
+        }
+        if (res.ok) ptDone(data);
+        else ptShow('fail', 'icon-alert.svg', res.status === 429 && typeof data.detail === 'string' ? data.detail : PT_FAIL);
+        ptSubmit.focus();
+      });
+    }).catch(function () {   /* 네트워크 오류 — 입력값 유지 */
+      ptSetBusy(false);
+      ptShow('fail', 'icon-alert.svg', PT_FAIL);
+      ptSubmit.focus();
+    });
+  });
+
+  [ptMerchant, ptAmount].forEach(function (input) {
+    input.addEventListener('input', function () {
+      var field = input.closest('.field');
+      if (field.classList.contains('is-error')) ptFieldError(field.getAttribute('data-paytest-field'), '');
+    });
+  });
+  paytest.querySelectorAll('[data-pt-merchant]').forEach(function (c) {
+    c.addEventListener('click', function () { ptMerchant.value = c.textContent; ptFieldError('merchant', ''); });
+  });
+  paytest.querySelectorAll('[data-pt-amount]').forEach(function (c) {
+    c.addEventListener('click', function () { ptAmount.value = A.num(+c.getAttribute('data-pt-amount')); ptFieldError('amount', ''); });
+  });
+
   /* ---------- 불러오기 ---------- */
   function load() {
     render('loading');
@@ -196,7 +348,9 @@
       if (!res.ok) throw new Error(String(res.status));   /* 403 · 404(카드 없음) · 5xx */
       return res.json();
     }).then(function (r) {
-      if (r) render(fromApi(r));
+      if (!r) return;
+      paytest.hidden = false;   /* 빈 상태 문구가 이 값을 보므로 render 전에 */
+      render(fromApi(r));
     }).catch(function () {
       render('error', load);
     });

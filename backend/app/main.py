@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app import db
-from app.routers import auth, chat, dashboard, health, me, members, ml, reservations
+from app.routers import auth, chat, dashboard, health, me, members, ml, payments, reservations
 from app.static_site import router as static_router
 
 
@@ -46,6 +46,7 @@ API_ROUTERS = [
     me.router,
     chat.router,
     ml.router,
+    payments.router,
 ]
 for api_router in API_ROUTERS:
     app.include_router(api_router, prefix="/api")
