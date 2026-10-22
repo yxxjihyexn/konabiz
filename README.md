@@ -12,8 +12,8 @@
 | <img src="docs/images/01-landing-ai.png" alt="랜딩 AI 섹션 — 가맹점 판별기와 AI 상담 카드" width="560"> | <img src="docs/images/04-chatbot-rag.png" alt="챗봇이 주점 정책을 답하고 참고한 안내 카테고리를 표시" width="260"> |
 | **판별 결과 — 식대P · 확신도 높음** | **판별 결과 — 결제 불가(제한 업종 규칙)** |
 | <img src="docs/images/02-classifier-meal-high.png" alt="달빛우동 성수점 → 식대P로 결제될 것 같아요, 확신도 94% 높음, 근거 업종 일식" width="420"> | <img src="docs/images/03-classifier-block.png" alt="블루문 유흥주점 → 결제할 수 없어요, 제한 업종 규칙" width="420"> |
-| **관리자 대시보드 (AI 정책 점검)** | **임직원 마이페이지 (결제내역 AI 분류)** |
-| <img src="docs/images/05-admin-dashboard.png" alt="관리자 대시보드 — 숫자 카드, 부서별 현황, AI 정책 점검 패널" width="560"> | <img src="docs/images/06-employee-mypage.png" alt="임직원 마이페이지 — 법인카드, 남은 포인트, 결제내역마다 AI 분류" width="560"> |
+| **관리자 대시보드 (최근 결제 알림 · 이번 달 차단 건수)** | **임직원 마이페이지 (결제 테스트 · 결제내역 AI 분류)** |
+| <img src="docs/images/05-admin-dashboard.png" alt="관리자 대시보드 — 숫자 카드(이번 달 차단 7건), 부서별 카드 현황, 카테고리별 지출, 최근 결제 알림(유흥주점 결제 차단 · 달빛우동 결제 승인)" width="560"> | <img src="docs/images/06-employee-mypage.png" alt="임직원 마이페이지 — 법인카드, 펼친 남은 포인트, 결제 전에 확인하기, 결제내역 제목 줄 [결제 테스트], 결제마다 AI 분류와 확신도, 승인 · 차단 · 확인 필요" width="560"> |
 
 ## AI 기능 2가지
 
