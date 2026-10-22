@@ -11,9 +11,10 @@ window.KonaClassifier = (function () {
 
   var MAX_LEN = 50;   /* backend ml_rules.NAME_MAX_LEN */
   var POCKET = { meal: '식대P', fitness: '체력단련P', welfare: '복지P', expense: '법인경비P' };
-  var IDLE = '가맹점 이름을 넣으면 어떤 포인트로 결제될지 알려드려요';
+  /* 모바일(767 이하)만 두 줄 — br-mo */
+  var IDLE = '가맹점 이름을 넣으면<br class="br-mo"> 어떤 포인트로 결제될지 알려드려요';
   var FAIL = '지금은 판별할 수 없어요. 잠시 후 다시 시도해주세요.';
-  var NOTE = '실제 결제는 가맹점에 등록된 업종으로 처리돼요. AI는 미리 알려드리는 역할이에요.';
+  var NOTE = '실제 결제는 가맹점에 등록된 업종으로 처리돼요.<br class="br-mo"> AI는 미리 알려드리는 역할이에요.';
 
   var uid = 0;
 
