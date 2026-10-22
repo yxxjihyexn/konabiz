@@ -224,6 +224,7 @@
 .skeleton--card { aspect-ratio: 400 / 252; }
 .skeleton--points { height: 386px; }   /* 펼친 포인트 카드 높이 (PC 기본 펼침, 모바일은 아래 접힌 높이) */
 .skeleton--history { height: 414px; }
+.skeleton--alerts { height: 256px; }   /* 대시보드 최근 결제 알림 4행 */
 
 /* =========================================================
    08 임직원관리

@@ -1,6 +1,8 @@
 /* =========================================================
    코나비즈 — admin.js (05 관리자 대시보드)
-   인원·카드 숫자(활성 카드 · 발급 중 · 부서별 카드 수)는 /api/dashboard/summary, 사용액·예산·카테고리·결제 알림은 예시값
+   인원·카드 숫자(활성 카드 · 발급 중 · 부서별 카드 수)는 /api/dashboard/summary,
+   최근 결제 알림 4건 · 이번 달 차단 건수는 /api/dashboard/payments (창으로 돌아올 때 다시 불러옴),
+   사용액·예산·카테고리·부서별 금액은 예시값
    ?sandbox=1은 API를 부르지 않고 예시 데이터(KonaMock)로
    ?state=empty → 계약 직후(임직원 0명) 빈 상태. DB에 임직원이 0명이어도 빈 상태
    ========================================================= */
@@ -23,14 +25,19 @@
     };
   }
 
-  if (sandbox) { draw(mockSummary()); return; }
+  if (sandbox) { draw(mockSummary()); drawPayments('mock'); return; }
 
   fetch('/api/dashboard/summary', { credentials: 'same-origin' }).then(function (res) {
     if (res.status === 401) return null;   /* 로그인 모달로 보내는 것은 app.js(/api/auth/me) */
     if (!res.ok) throw new Error(String(res.status));
     return res.json();
   }).then(function (s) {
-    if (s) draw(s);
+    if (!s) return;
+    draw(s);
+    if (forceEmpty || s.employees.total === 0) return;
+    loadPayments();
+    /* 시연: 임직원 탭에서 결제하고 돌아오면 바로 보이게 */
+    window.addEventListener('focus', loadPayments);
   }).catch(function () {
     var main = document.querySelector('[data-metrics]');
     main.hidden = true;
@@ -48,12 +55,14 @@
       ['이번 달 사용액', empty ? 0 : used, '원'],
       ['이번 달 예산', D.budget, '원'],
       ['활성 카드 수', empty ? 0 : s.cards.active, '장', issuing ? '&nbsp;· 발급 중 ' + A.num(issuing) : ''],
-      ['이번 달 차단 건수', empty ? 0 : D.blockedCount, '건']
+      /* 차단 건수는 /api/dashboard/payments가 채움 (Sandbox는 예시값) — 불러오기 전 "–" */
+      ['이번 달 차단 건수', empty ? 0 : sandbox ? D.blockedCount : null, '건']
     ];
     /* 4번째 값(발급 중)은 단위 span을 하나 더 — 칸이 좁으면(1024 4열) 통째로 다음 줄로 */
-    document.querySelector('[data-metrics]').innerHTML = metrics.map(function (m) {
+    document.querySelector('[data-metrics]').innerHTML = metrics.map(function (m, i) {
       return '<div class="metric-card"><p class="metric-card__label">' + m[0] + '</p>' +
-        '<p class="metric-card__value"><span class="metric-card__num">' + A.num(m[1]) + '</span>' +
+        '<p class="metric-card__value"><span class="metric-card__num"' + (i === 3 ? ' data-blocked-count' : '') + '>' +
+        (m[1] === null ? '–' : A.num(m[1])) + '</span>' +
         '<span class="metric-card__unit">' + m[2] + '</span>' +
         (m[3] ? '<span class="metric-card__unit">' + m[3] + '</span>' : '') + '</p></div>';
     }).join('');
@@ -104,12 +113,6 @@
         '<span class="cat-row__pct" aria-hidden="true">' + pct + '%</span></div></li>';
     }).join('');
 
-    /* ---------- 최근 결제 알림 4건 ---------- */
-    var alerts = D.alerts.map(function (a) {
-      return '<li class="pay-row' + (a.ok ? '' : ' is-blocked') + '">' +
-        '<img class="pay-row__icon" src="assets/' + (a.ok ? 'icon-check-green.svg' : 'icon-stop.svg') + '" alt="' + (a.ok ? '승인' : '차단') + '" width="20" height="20">' +
-        '<div class="pay-row__text"><p class="pay-row__title">' + a.title + '</p><p class="pay-row__meta">' + a.meta + '</p></div></li>';
-    }).join('');
 
     body.outerHTML =
       '<section class="panel" aria-labelledby="dept-title">' +
@@ -126,7 +129,7 @@
         '</section>' +
         '<section class="panel dash-bottom__alert" aria-labelledby="alert-title">' +
           '<h2 id="alert-title" class="panel__title">최근 결제 알림</h2>' +
-          '<ul class="pay-list">' + alerts + '</ul>' +
+          '<div data-alerts><div class="skeleton skeleton--alerts" aria-hidden="true"></div></div>' +
         '</section>' +
       '</div>' +
       /* AI 정책 점검 — 맨 아래 전체 폭, 판별기는 최대 640 (Sandbox에서도 실제 API) */
@@ -138,5 +141,76 @@
       '</section>';
 
     if (window.KonaClassifier) window.KonaClassifier.mount(document.querySelector('.ai-check [data-classifier]'));
+  }
+
+  /* ---------- 최근 결제 알림 4건 · 이번 달 차단 건수 ----------
+     상태 아이콘·사유는 마이페이지 결제내역과 같게 — 승인 · 차단(빨강 사유) · 확인 필요(느낌표, 회색 사유)
+     이름·이메일 없이 부서만. 시각은 방금 전 · N분 전 · N시간 전(오늘) · 어제 HH:MM · MM/DD HH:MM (KST) */
+  var KST_MS = 9 * 3600 * 1000;
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function kstDay(ms) { return Math.floor((ms + KST_MS) / 86400000); }
+
+  function relTime(iso) {
+    var t = new Date(iso).getTime(), now = Date.now(), min = Math.floor((now - t) / 60000);
+    var k = new Date(t + KST_MS), hm = pad(k.getUTCHours()) + ':' + pad(k.getUTCMinutes());
+    if (min < 1) return '방금 전';
+    if (min < 60) return min + '분 전';
+    var days = kstDay(now) - kstDay(t);
+    if (days === 0) return Math.floor(min / 60) + '시간 전';
+    if (days === 1) return '어제 ' + hm;
+    return pad(k.getUTCMonth() + 1) + '/' + pad(k.getUTCDate()) + ' ' + hm;
+  }
+
+  function alertRow(a) {
+    var blocked = a.status === 'blocked', review = a.status === 'review';
+    var label = blocked ? '차단' : review ? '확인 필요' : '승인';
+    var icon = blocked ? 'icon-stop.svg' : review ? 'icon-alert-ink.svg' : 'icon-check-green.svg';
+    return '<li class="pay-row' + (blocked ? ' is-blocked' : review ? ' is-review' : '') + '">' +
+      '<img class="pay-row__icon" src="assets/' + icon + '" alt="' + label + '" width="20" height="20">' +
+      '<div class="pay-row__text"><p class="pay-row__title">' + A.esc(a.merchant) + ' 결제 ' + label + '</p>' +
+      '<p class="pay-row__meta">' + A.esc(a.dept || '부서 없음') + ' · ' + relTime(a.paid_at) + ' · ' + A.won(a.amount) + '</p>' +
+      ((blocked || review) && a.blocked_reason ? '<p class="pay-row__reason">' + A.esc(a.blocked_reason) + '</p>' : '') +
+      '</div></li>';
+  }
+
+  /* p: API 응답 | 'mock'(Sandbox 예시) | 'error' */
+  function drawPayments(p) {
+    var box = document.querySelector('[data-alerts]');
+    var num = document.querySelector('[data-blocked-count]');
+    if (!box) return;
+    if (p === 'mock') {
+      box.innerHTML = '<ul class="pay-list">' + D.alerts.map(function (a) {
+        return '<li class="pay-row' + (a.ok ? '' : ' is-blocked') + '">' +
+          '<img class="pay-row__icon" src="assets/' + (a.ok ? 'icon-check-green.svg' : 'icon-stop.svg') + '" alt="' + (a.ok ? '승인' : '차단') + '" width="20" height="20">' +
+          '<div class="pay-row__text"><p class="pay-row__title">' + a.title + '</p><p class="pay-row__meta">' + a.meta + '</p></div></li>';
+      }).join('') + '</ul>';
+      return;
+    }
+    if (p === 'error') {   /* 차단 건수는 이전 값 그대로 (처음이면 "–") */
+      box.innerHTML = '';
+      box.appendChild(A.loadError(loadPayments));
+      return;
+    }
+    num.textContent = A.num(p.blocked_this_month);
+    box.innerHTML = p.alerts.length
+      ? '<ul class="pay-list">' + p.alerts.map(alertRow).join('') + '</ul>'
+      : '<p class="panel__desc">아직 결제가 없어요</p>';
+  }
+
+  var paymentsBusy = false;
+  function loadPayments() {
+    if (paymentsBusy) return;
+    paymentsBusy = true;
+    fetch('/api/dashboard/payments', { credentials: 'same-origin' }).then(function (res) {
+      if (res.status === 401) return null;   /* 로그인 모달로 보내는 것은 app.js */
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    }).then(function (p) {
+      if (p) drawPayments(p);
+    }).catch(function () {
+      drawPayments('error');
+    }).then(function () {
+      paymentsBusy = false;
+    });
   }
 })();

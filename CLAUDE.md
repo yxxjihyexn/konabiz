@@ -27,6 +27,9 @@
   - employee.html: `suspended` · `issuing` · `no-payments` · `loading` · `error`
   - admin-members.html: 없음 (5단계부터 DB 목록. 임직원 0명이면 빈 상태, 불러오는 중 skeleton · 실패 alert-box + [다시 시도])
 - 부서는 영업1팀·마케팅팀·개발팀 3개 (`backend/app/member_rules.py` DEPTS = `KonaMock.DEPTS`). 대시보드 "활성 카드 수"는 사용 중(active)만, 발급 중(issuing)은 단위 뒤 "18장 · 발급 중 3"(두 번째 `metric-card__unit`, 좁으면 다음 줄). 부서 줄 카드 수도 active만(5·5·8). 로그인 화면은 `/api/dashboard/summary`, Sandbox는 `KonaMock.activeCards()` · `issuingCards()`. 9.7의 "활성 카드 24장"보다 이 규칙이 우선
+- 대시보드 "최근 결제 알림" 4건 · "이번 달 차단 건수"는 `GET /api/dashboard/payments`(관리자 회사 범위, `cards.transactions` 집계). 차단 건수는 이번 달 KST 1일 00:00부터 status blocked(review 제외). 알림은 부서만(이름·이메일 없음), "{가맹점} 결제 승인|차단|확인 필요" + "부서 · 방금 전|N분 전|N시간 전|어제 HH:MM|MM/DD HH:MM · 금액", 아이콘·사유는 마이페이지 결제내역과 같게
+  - 창 focus 때 다시 불러옴(임직원 탭에서 결제 → 관리자 탭). 실패는 그 패널만 [다시 시도], 차단 건수는 이전 값(처음이면 "–"). Sandbox는 예시값(`KonaMock.admin.alerts` · `blockedCount`), 빈 상태는 부르지 않음
+  - 사용액·예산·카테고리·부서별 금액은 아직 예시값
 - 임직원관리(admin-members.html · `js/admin-members.js`): 단건 초대·임시 비밀번호 재발급·정지·정지 해제·회수는 `/api/members`로 DB 저장. 목록은 회사 전체를 받고 필터·검색·페이지는 화면에서. CSV 일괄 등록만 예시 동작(저장 안 함, ⋯ 없음)
   - ⋯ 메뉴는 상태 전이표대로: 초대됨 [임시 비밀번호 다시 발급], 사용 중 [카드 정지], 정지 [정지 해제] + 회수됨 외 모두 [카드 회수]. 정지·해제·회수 모두 확인 창(`modal-suspend` · `modal-resume` · `modal-revoke`) 후 실행, 요청 중 확인 버튼 "…중" + 그 행 ⋯ 비활성, 409는 토스트 후 목록 새로고침
   - 초대 완료·재발급 화면은 `modal-invite` 안의 `[data-invite-view="done"]`. 임시 비밀번호는 여기서만, `data-locked`라 바깥 클릭·ESC로 안 닫히고 [확인]으로만 (common.js가 `data-locked` 모달은 ESC·오버레이·`data-modal-close`를 무시). 이메일·임시 비밀번호를 `info-list--wrap`(긴 이메일 아무 위치 줄바꿈, 이 화면만)으로 전체 표시, [로그인 정보 복사]는 "[코나비즈] 로그인 정보 / 이메일: … / 임시 비밀번호: …" 3줄을 한 번에. 실패면 안내 + 로그인 정보 자동 선택
