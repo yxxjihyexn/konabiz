@@ -810,8 +810,8 @@
     if (!tempPw.textContent) return;
     var text = loginText();
     copyFail.hidden = true;
-    if (!navigator.clipboard || !navigator.clipboard.writeText) { copyFailed(); return; }
-    navigator.clipboard.writeText(text).then(function () {
+    /* clipboard API → 안 되면 textarea 대체 복사 (common.js) — 둘 다 실패할 때만 직접 선택 안내 */
+    Kona.copyText(text).then(function () {
       copyBtn.textContent = '복사했어요';
       copyLive.textContent = '';
       setTimeout(function () { copyLive.textContent = '로그인 정보를 복사했어요'; }, 50);

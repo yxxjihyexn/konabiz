@@ -172,12 +172,46 @@
     next.click();
   });
 
+  /* ---------- 클립보드 복사 ----------
+     navigator.clipboard는 https · localhost에서만 있음 (발표 LAN 주소 http://192.168.x.x 에서는 없음)
+     → 못 쓰거나 거절되면 숨긴 textarea를 선택해 execCommand('copy'). 둘 다 실패면 Promise reject
+     textarea는 지금 열린 모달 안에 붙임 (모달 포커스 가두기 밖으로 포커스가 나가지 않게), 끝나면 포커스 되돌림 */
+  function copyByTextarea(text) {
+    var back = document.activeElement;
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.setAttribute('aria-hidden', 'true');
+    ta.tabIndex = -1;
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;';
+    (current ? current.el : document.body).appendChild(ta);
+    ta.focus({ preventScroll: true });
+    ta.select();
+    ta.setSelectionRange(0, text.length);   /* iOS Safari */
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    ta.remove();
+    if (back && back.focus) back.focus({ preventScroll: true });
+    return ok;
+  }
+
+  function copyText(text) {
+    var fallback = function () {
+      return copyByTextarea(text) ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(fallback);
+    }
+    return fallback();
+  }
+
   window.Kona = {
     openModal: openModal,
     closeModal: closeModal,
     currentModal: function () { return current && current.el; },
     toast: toast,
-    selectItem: selectItem
+    selectItem: selectItem,
+    copyText: copyText
   };
 })();
 
