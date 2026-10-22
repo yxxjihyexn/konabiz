@@ -56,10 +56,7 @@
         <div class="mypage__left">
           <div class="card-area" data-card-area></div>
           <section class="panel" aria-labelledby="points-title" data-points></section>
-        </div>
-        <div class="mypage__right">
-          <section class="panel" aria-labelledby="history-title" data-history></section>
-          <!-- AI 판별기 — 결제내역 아래 (모바일: 카드 → 포인트 → 결제내역 → 판별) -->
+          <!-- AI 판별기 — 포인트 아래 (결제내역이 길어져도 같은 자리, Figma와 다름 · 모바일: 카드 → 포인트 → 판별 → 결제내역) -->
           <section class="panel" aria-labelledby="precheck-title">
             <div class="panel__head">
               <div class="panel__title-row">
@@ -70,6 +67,9 @@
             </div>
             <div data-classifier></div>
           </section>
+        </div>
+        <div class="mypage__right">
+          <section class="panel" aria-labelledby="history-title" data-history></section>
         </div>
       </div>
     </main>

@@ -99,7 +99,11 @@
         : '<p class="card-help" aria-disabled="true">카드 분실신고 · 잠금 <span class="card-help__soon">준비 중</span></p>');
   }
 
-  /* ---------- 이번 달 남은 포인트 (합계에서 법인경비P 제외) ---------- */
+  /* ---------- 이번 달 남은 포인트 (합계에서 법인경비P 제외) ----------
+     기본은 접힘 — 합계만 크게, [카테고리별 남은 금액](aria-expanded)으로 4종 펼침.
+     결제 테스트 뒤 다시 그려도 펼친 상태 유지 (페이지를 새로 열면 다시 접힘) */
+  var pointsOpen = false;
+
   function renderPoints(view, onRetry) {
     if (view === 'loading') {
       points.className = 'skeleton skeleton--points';
@@ -120,9 +124,19 @@
       return '<li class="info-row"><span class="info-row__label">' + label + '</span><span class="info-row__value">' + A.won(v) + '</span></li>';
     };
     points.innerHTML = head + '<p class="points-head__total">' + A.won(view.total) + '</p></div>' +
-      '<ul class="info-list points-list">' + row('식대P', b.meal) + row('체력단련P', b.fitness) + row('복지P', b.welfare) + '</ul>' +
-      '<div class="points-divider" aria-hidden="true"></div>' +
-      '<p class="info-row points-expense"><span class="info-row__label">법인경비P (별도 예산)</span><span class="info-row__value">' + A.won(view.expense) + '</span></p>';
+      '<button class="points-toggle" type="button" aria-expanded="' + pointsOpen + '" aria-controls="points-detail">' +
+        '카테고리별 남은 금액<img src="assets/icon-caret-down.svg" alt="" width="20" height="20"></button>' +
+      '<div id="points-detail" class="points-detail"' + (pointsOpen ? '' : ' hidden') + '>' +
+        '<ul class="info-list points-list">' + row('식대P', b.meal) + row('체력단련P', b.fitness) + row('복지P', b.welfare) + '</ul>' +
+        '<div class="points-divider" aria-hidden="true"></div>' +
+        '<p class="info-row points-expense"><span class="info-row__label">법인경비P (별도 예산)</span><span class="info-row__value">' + A.won(view.expense) + '</span></p>' +
+      '</div>';
+    var toggle = points.querySelector('.points-toggle');
+    toggle.addEventListener('click', function () {
+      pointsOpen = !pointsOpen;
+      toggle.setAttribute('aria-expanded', String(pointsOpen));
+      points.querySelector('#points-detail').hidden = !pointsOpen;
+    });
   }
 
   /* ---------- 최근 결제내역 (최신순) ---------- */
