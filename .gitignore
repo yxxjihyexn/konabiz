@@ -12,4 +12,7 @@ backend/ml/data/
 
 # 로컬 전용
 포트폴리오 사용할것/
+
+# 발표 자료 — 수정할 때마다 통째로 쌓여 저장소가 커지므로 커밋하지 않음
+*.pptx
 .claude/settings.local.json
