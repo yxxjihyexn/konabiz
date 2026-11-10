@@ -51,6 +51,16 @@
 }
 
 /* ---------- 2. GNB ---------- */
+/* 상단 메뉴 고정 — 스크롤해도 체험 버튼이 보이게 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;                         /* 챗봇(15)·모달(50)보다 아래 */
+  background: var(--neutral-canvas);
+}
+/* 메뉴 앵커로 이동할 때 섹션 제목이 메뉴에 가려지지 않게 */
+html { scroll-padding-top: var(--header-h); }
+
 .header__inner {
   display: flex;
   align-items: center;
